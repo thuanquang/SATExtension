@@ -166,6 +166,35 @@ class SATQuizBlocker {
         this.unblockWebsite();
         return;
       }
+      
+      // Validate question data
+      if (!this.currentQuestion.question_text) {
+        console.error('🎓 SAT Quiz Blocker: Question missing text:', this.currentQuestion);
+        this.unblockWebsite();
+        return;
+      }
+      
+      if (this.currentQuestion.question_type === 'multiple_choice') {
+        const choices = this.currentQuestion.answer_choices || [];
+        if (!Array.isArray(choices) || choices.length === 0) {
+          console.error('🎓 SAT Quiz Blocker: Multiple choice question missing valid choices:', this.currentQuestion);
+          this.unblockWebsite();
+          return;
+        }
+        
+        // Check for empty choices
+        const validChoices = choices.filter(choice => choice && choice.trim() !== '');
+        if (validChoices.length !== choices.length) {
+          console.error('🎓 SAT Quiz Blocker: Question has empty choices:', this.currentQuestion);
+          console.error('🎓 SAT Quiz Blocker: Valid choices count:', validChoices.length, 'Total choices:', choices.length);
+        }
+        
+        if (!this.currentQuestion.correct_answer) {
+          console.error('🎓 SAT Quiz Blocker: Multiple choice question missing correct answer:', this.currentQuestion);
+          this.unblockWebsite();
+          return;
+        }
+      }
 
       // Create and show modal
       console.log('🎓 SAT Quiz Blocker: Creating modal...');
@@ -245,16 +274,31 @@ class SATQuizBlocker {
     if (question.question_type === 'multiple_choice') {
       const options = question.answer_choices || [question.option_a, question.option_b, question.option_c, question.option_d];
       
-      questionContent = `
-        <div class="quiz-options">
-          ${options.map((option, index) => `
-            <label class="option-label" style="display: block; margin: 10px 0; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-              <input type="radio" name="answer" value="${String.fromCharCode(65 + index)}" style="margin-right: 10px;">
-              <span style="font-weight: 500;">${String.fromCharCode(65 + index)}.</span> ${option}
-            </label>
-          `).join('')}
-        </div>
-      `;
+      // Filter out empty or null options
+      const validOptions = options.filter(option => option && option.trim() !== '');
+      
+      console.log('🎓 SAT Quiz Blocker: Original options:', options);
+      console.log('🎓 SAT Quiz Blocker: Valid options:', validOptions);
+      
+      if (validOptions.length === 0) {
+        console.error('🎓 SAT Quiz Blocker: No valid options found for question:', question);
+        questionContent = `
+          <div class="quiz-options" style="color: #dc3545; padding: 20px; text-align: center;">
+            <p>Error: No valid answer options available for this question.</p>
+          </div>
+        `;
+      } else {
+        questionContent = `
+          <div class="quiz-options">
+            ${validOptions.map((option, index) => `
+              <label class="option-label" style="display: block; margin: 10px 0; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                <input type="radio" name="answer" value="${String.fromCharCode(65 + index)}" style="margin-right: 10px;">
+                <span style="font-weight: 500;">${String.fromCharCode(65 + index)}.</span> ${option}
+              </label>
+            `).join('')}
+          </div>
+        `;
+      }
     } else if (question.question_type === 'numeric') {
       questionContent = `
         <div class="numeric-input" style="margin: 20px 0;">

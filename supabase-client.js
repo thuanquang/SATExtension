@@ -210,6 +210,28 @@ class SupabaseClient {
       const choices = question.answer_choices || [];
       const correctIndex = parseInt(question.correct_answer) - 1; // Convert from 1-based to 0-based
       
+      // Validate answer choices
+      if (!Array.isArray(choices) || choices.length === 0) {
+        console.error('🎓 Supabase Client: Invalid answer_choices for question:', question.question_id);
+        console.error('🎓 Supabase Client: answer_choices:', choices);
+        return null;
+      }
+      
+      // Check for empty or null choices
+      const validChoices = choices.filter(choice => choice && choice.trim() !== '');
+      if (validChoices.length !== choices.length) {
+        console.error('🎓 Supabase Client: Found empty choices in question:', question.question_id);
+        console.error('🎓 Supabase Client: Original choices:', choices);
+        console.error('🎓 Supabase Client: Valid choices:', validChoices);
+      }
+      
+      // Validate correct answer index
+      if (isNaN(correctIndex) || correctIndex < 0 || correctIndex >= choices.length) {
+        console.error('🎓 Supabase Client: Invalid correct_answer index for question:', question.question_id);
+        console.error('🎓 Supabase Client: correct_answer:', question.correct_answer, 'choices length:', choices.length);
+        return null;
+      }
+      
       const formattedQuestion = {
         id: question.question_id,
         question_text: question.question_text,
