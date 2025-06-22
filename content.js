@@ -221,6 +221,17 @@ class SATQuizBlocker {
     
     submitBtn.addEventListener('click', () => this.handleSubmit());
 
+    // Add instruction toggle functionality
+    const instructionToggle = modal.querySelector('#instruction-toggle');
+    const instructionBox = modal.querySelector('#instruction-box');
+    if (instructionToggle && instructionBox) {
+      instructionToggle.addEventListener('click', () => {
+        const isVisible = instructionBox.style.display !== 'none';
+        instructionBox.style.display = isVisible ? 'none' : 'block';
+        instructionToggle.textContent = isVisible ? '📖 Show Instructions' : '📖 Hide Instructions';
+      });
+    }
+
     this.modal = modal;
     document.body.appendChild(modal);
     console.log('🎓 SAT Quiz Blocker: Modal created and added to page');
@@ -272,8 +283,21 @@ class SATQuizBlocker {
         </h3>
         
         ${question.instructions ? `
-          <div style="margin: 15px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; font-size: 14px; color: #1976d2;">
-            <strong>Instructions:</strong> ${question.instructions}
+          <div style="margin: 15px 0;">
+            <button id="instruction-toggle" style="
+              background: #6c757d;
+              color: white;
+              border: none;
+              padding: 8px 16px;
+              border-radius: 4px;
+              font-size: 12px;
+              cursor: pointer;
+              transition: all 0.2s;
+              margin-bottom: 10px;
+            ">📖 Show Instructions</button>
+            <div id="instruction-box" style="display: none; margin: 15px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; font-size: 14px; color: #1976d2;">
+              <strong>Instructions:</strong> ${question.instructions}
+            </div>
           </div>
         ` : ''}
         
