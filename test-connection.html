@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT Quiz Blocker - Connection Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        .question-display {
+            background: #e9ecef;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .config-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 SAT Quiz Blocker - Connection Test</h1>
+        
+        <div id="status" class="status info">
+            Ready to test connection...
+        </div>
+        
+        <div>
+            <button onclick="showConfig()">Show Configuration</button>
+            <button onclick="testConnection()">Test Supabase Connection</button>
+            <button onclick="getRandomQuestion()">Get Random Question</button>
+            <button onclick="checkDatabase()">Check Database Tables</button>
+            <button onclick="testExtensionStorage()">Test Extension Storage</button>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+        
+        <div id="log"></div>
+    </div>
+
+    <script>
+        // Configuration (embedded from config.js)
+        const SUPABASE_CONFIG = {
+            url: 'https://gvxjveicefxhykjwngeq.supabase.co',
+            anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd2eGp2ZWljZWZ4aHlranduZ2VxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTA1MTUwMjAsImV4cCI6MjA2NjA5MTAyMH0.rYb9tx_me30rMiL5Hq35AyYJK68uzTYcgrhxwNSq2lM',
+            tableName: 'questions'
+        };
+
+        const EXTENSION_CONFIG = {
+            quizInterval: 30 * 60 * 1000,
+            maxAttempts: 3,
+            questionsPerSession: 1,
+            preferredDifficulty: 'medium',
+            preferredTags: ['Algebra', 'Geometry', 'Grammar', 'Vocabulary']
+        };
+
+        // Supabase Client (embedded from supabase-client.js)
+        class SupabaseClient {
+            constructor() {
+                this.supabaseUrl = SUPABASE_CONFIG.url;
+                this.supabaseKey = SUPABASE_CONFIG.anonKey;
+                this.tableName = SUPABASE_CONFIG.tableName;
+                console.log('🎓 Supabase Client: Initialized with URL:', this.supabaseUrl);
+                console.log('🎓 Supabase Client: Table name:', this.tableName);
+            }
+
+            async getRandomQuestion() {
+                try {
+                    console.log('🎓 Supabase Client: Getting random question...');
+                    
+                    // Build filter conditions
+                    const filters = [];
+                    
+                    // Filter by preferred tags if specified
+                    if (EXTENSION_CONFIG.preferredTags && EXTENSION_CONFIG.preferredTags.length > 0) {
+                        const tagFilter = EXTENSION_CONFIG.preferredTags.map(tag => `tag.eq.${tag}`).join(',');
+                        filters.push(`or(${tagFilter})`);
+                        console.log('🎓 Supabase Client: Filtering by tags:', EXTENSION_CONFIG.preferredTags);
+                    }
+                    
+                    // Filter by preferred difficulty if specified
+                    if (EXTENSION_CONFIG.preferredDifficulty) {
+                        filters.push(`difficulty.eq.${EXTENSION_CONFIG.preferredDifficulty}`);
+                        console.log('🎓 Supabase Client: Filtering by difficulty:', EXTENSION_CONFIG.preferredDifficulty);
+                    }
+                    
+                    // Build the URL with filters
+                    let url = `${this.supabaseUrl}/rest/v1/${this.tableName}?select=*`;
+                    if (filters.length > 0) {
+                        url += `&${filters.join('&')}`;
+                    }
+                    
+                    console.log('🎓 Supabase Client: Making request to:', url);
+                    
+                    const response = await fetch(url, {
+                        method: 'GET',
+                        headers: {
+                            'apikey': this.supabaseKey,
+                            'Authorization': `Bearer ${this.supabaseKey}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    console.log('🎓 Supabase Client: Response status:', response.status);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('🎓 Supabase Client: HTTP error! status:', response.status, 'response:', errorText);
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('🎓 Supabase Client: Received data length:', data ? data.length : 0);
+                    
+                    if (data && data.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * data.length);
+                        const selectedQuestion = data[randomIndex];
+                        console.log('🎓 Supabase Client: Selected question index:', randomIndex);
+                        console.log('🎓 Supabase Client: Selected question:', selectedQuestion);
+                        return this.formatQuestion(selectedQuestion);
+                    }
+                    
+                    console.log('🎓 Supabase Client: No questions match filters, trying fallback...');
+                    
+                    // If no questions match the filters, get any random question
+                    const fallbackResponse = await fetch(`${this.supabaseUrl}/rest/v1/${this.tableName}?select=*`, {
+                        method: 'GET',
+                        headers: {
+                            'apikey': this.supabaseKey,
+                            'Authorization': `Bearer ${this.supabaseKey}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    console.log('🎓 Supabase Client: Fallback response status:', fallbackResponse.status);
+                    
+                    if (!fallbackResponse.ok) {
+                        const errorText = await fallbackResponse.text();
+                        console.error('🎓 Supabase Client: Fallback HTTP error! status:', fallbackResponse.status, 'response:', errorText);
+                        throw new Error(`HTTP error! status: ${fallbackResponse.status}`);
+                    }
+                    
+                    const fallbackData = await fallbackResponse.json();
+                    console.log('🎓 Supabase Client: Fallback data length:', fallbackData ? fallbackData.length : 0);
+                    
+                    if (fallbackData && fallbackData.length > 0) {
+                        const randomIndex = Math.floor(Math.random() * fallbackData.length);
+                        const selectedQuestion = fallbackData[randomIndex];
+                        console.log('🎓 Supabase Client: Selected fallback question index:', randomIndex);
+                        console.log('🎓 Supabase Client: Selected fallback question:', selectedQuestion);
+                        return this.formatQuestion(selectedQuestion);
+                    }
+                    
+                    console.log('🎓 Supabase Client: No questions available in database');
+                    return null;
+                } catch (error) {
+                    console.error('🎓 Supabase Client: Error fetching question:', error);
+                    return null;
+                }
+            }
+
+            formatQuestion(question) {
+                console.log('🎓 Supabase Client: Formatting question:', question);
+                
+                if (question.question_type === 'multiple_choice') {
+                    // For multiple choice questions, convert to the expected format
+                    const choices = question.answer_choices || [];
+                    const correctIndex = parseInt(question.correct_answer) - 1; // Convert from 1-based to 0-based
+                    
+                    const formattedQuestion = {
+                        id: question.question_id,
+                        question_text: question.question_text,
+                        instructions: question.instructions,
+                        explanation: question.explanation,
+                        difficulty: question.difficulty,
+                        tag: question.tag,
+                        question_type: question.question_type,
+                        option_a: choices[0] || '',
+                        option_b: choices[1] || '',
+                        option_c: choices[2] || '',
+                        option_d: choices[3] || '',
+                        correct_answer: String.fromCharCode(65 + correctIndex), // Convert to A, B, C, D
+                        answer_choices: choices
+                    };
+                    
+                    console.log('🎓 Supabase Client: Formatted multiple choice question:', formattedQuestion);
+                    return formattedQuestion;
+                } else if (question.question_type === 'numeric') {
+                    // For numeric questions
+                    const formattedQuestion = {
+                        id: question.question_id,
+                        question_text: question.question_text,
+                        instructions: question.instructions,
+                        explanation: question.explanation,
+                        difficulty: question.difficulty,
+                        tag: question.tag,
+                        question_type: question.question_type,
+                        correct_answer: question.correct_answer,
+                        answer_choices: []
+                    };
+                    
+                    console.log('🎓 Supabase Client: Formatted numeric question:', formattedQuestion);
+                    return formattedQuestion;
+                }
+                
+                console.log('🎓 Supabase Client: Returning unformatted question:', question);
+                return question;
+            }
+        }
+
+        // Initialize Supabase client
+        const supabaseClient = new SupabaseClient();
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `status ${type}`;
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.className = `status ${type}`;
+            statusDiv.textContent = message;
+        }
+        
+        function showConfig() {
+            updateStatus('Showing configuration...', 'info');
+            log('Current Configuration:', 'info');
+            
+            const configDisplay = document.createElement('div');
+            configDisplay.className = 'config-display';
+            configDisplay.innerHTML = `
+                <h3>Supabase Configuration:</h3>
+                <pre>URL: ${SUPABASE_CONFIG.url}
+Table: ${SUPABASE_CONFIG.tableName}
+Key: ${SUPABASE_CONFIG.anonKey.substring(0, 20)}...</pre>
+                
+                <h3>Extension Configuration:</h3>
+                <pre>Quiz Interval: ${EXTENSION_CONFIG.quizInterval}ms (${Math.round(EXTENSION_CONFIG.quizInterval / 60000)} minutes)
+Max Attempts: ${EXTENSION_CONFIG.maxAttempts}
+Preferred Difficulty: ${EXTENSION_CONFIG.preferredDifficulty}
+Preferred Tags: ${EXTENSION_CONFIG.preferredTags.join(', ')}</pre>
+            `;
+            
+            document.getElementById('log').appendChild(configDisplay);
+        }
+        
+        async function testConnection() {
+            updateStatus('Testing connection...', 'info');
+            log('Starting connection test...', 'info');
+            
+            try {
+                log(`Testing connection to: ${SUPABASE_CONFIG.url}`, 'info');
+                log(`Table name: ${SUPABASE_CONFIG.tableName}`, 'info');
+                
+                // Test basic connection
+                const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/${SUPABASE_CONFIG.tableName}?select=count`, {
+                    method: 'GET',
+                    headers: {
+                        'apikey': SUPABASE_CONFIG.anonKey,
+                        'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                log(`Response status: ${response.status}`, response.ok ? 'success' : 'error');
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`Connection successful! Found ${data.length} records`, 'success');
+                    updateStatus('Connection successful!', 'success');
+                } else {
+                    const errorText = await response.text();
+                    log(`Connection failed: ${errorText}`, 'error');
+                    updateStatus('Connection failed!', 'error');
+                }
+                
+            } catch (error) {
+                log(`Connection error: ${error.message}`, 'error');
+                updateStatus('Connection error!', 'error');
+            }
+        }
+        
+        async function getRandomQuestion() {
+            updateStatus('Fetching random question...', 'info');
+            log('Fetching random question...', 'info');
+            
+            try {
+                const question = await supabaseClient.getRandomQuestion();
+                
+                if (question) {
+                    log('Question retrieved successfully!', 'success');
+                    log(`Question ID: ${question.id}`, 'info');
+                    log(`Type: ${question.question_type}`, 'info');
+                    log(`Category: ${question.tag}`, 'info');
+                    log(`Difficulty: ${question.difficulty}`, 'info');
+                    
+                    // Display the question
+                    const questionDisplay = document.createElement('div');
+                    questionDisplay.className = 'question-display';
+                    questionDisplay.innerHTML = `
+                        <h3>Question Preview:</h3>
+                        <p><strong>Text:</strong> ${question.question_text}</p>
+                        <p><strong>Instructions:</strong> ${question.instructions || 'None'}</p>
+                        <p><strong>Correct Answer:</strong> ${question.correct_answer}</p>
+                        ${question.question_type === 'multiple_choice' ? 
+                            `<p><strong>Options:</strong> ${question.answer_choices.join(', ')}</p>` : 
+                            '<p><strong>Type:</strong> Numeric input</p>'
+                        }
+                    `;
+                    
+                    document.getElementById('log').appendChild(questionDisplay);
+                    updateStatus('Question retrieved successfully!', 'success');
+                } else {
+                    log('No questions found in database', 'warning');
+                    updateStatus('No questions found!', 'warning');
+                }
+                
+            } catch (error) {
+                log(`Error fetching question: ${error.message}`, 'error');
+                updateStatus('Error fetching question!', 'error');
+            }
+        }
+        
+        async function checkDatabase() {
+            updateStatus('Checking database tables...', 'info');
+            log('Checking database tables...', 'info');
+            
+            const tables = ['questions', 'tests', 'test_sections', 'test_questions'];
+            
+            for (const table of tables) {
+                try {
+                    const response = await fetch(`${SUPABASE_CONFIG.url}/rest/v1/${table}?select=count`, {
+                        method: 'GET',
+                        headers: {
+                            'apikey': SUPABASE_CONFIG.anonKey,
+                            'Authorization': `Bearer ${SUPABASE_CONFIG.anonKey}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        log(`Table '${table}': ${data.length} records`, 'success');
+                    } else {
+                        log(`Table '${table}': Error (${response.status})`, 'error');
+                    }
+                    
+                } catch (error) {
+                    log(`Table '${table}': ${error.message}`, 'error');
+                }
+            }
+            
+            updateStatus('Database check completed!', 'info');
+        }
+        
+        async function testExtensionStorage() {
+            updateStatus('Testing extension storage...', 'info');
+            log('Testing extension storage...', 'info');
+            
+            try {
+                // Test if we're in a Chrome extension context
+                if (typeof chrome !== 'undefined' && chrome.storage) {
+                    log('Chrome extension storage available', 'success');
+                    
+                    // Test storage access
+                    chrome.storage.local.get(null, (result) => {
+                        log(`Storage test successful. Current data:`, 'info');
+                        log(JSON.stringify(result, null, 2), 'info');
+                    });
+                } else {
+                    log('Not in Chrome extension context - storage test skipped', 'warning');
+                    log('This is normal when running the test page outside of the extension', 'info');
+                }
+                
+            } catch (error) {
+                log(`Storage test error: ${error.message}`, 'error');
+            }
+            
+            updateStatus('Storage test completed!', 'info');
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            updateStatus('Log cleared', 'info');
+        }
+        
+        // Auto-test on page load
+        window.addEventListener('load', () => {
+            log('Page loaded, ready for testing', 'info');
+            log('Configuration loaded successfully', 'success');
+        });
+    </script>
+</body>
+</html> 

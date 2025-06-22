@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "SAT Quiz Blocker",
+  "version": "1.0.1",
+  "description": "Blocks websites until users answer SAT questions correctly",
+  "permissions": [
+    "storage",
+    "scripting",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "SAT Quiz Blocker"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "quiz-modal.html"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ]
+} 
