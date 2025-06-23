@@ -7,14 +7,16 @@ class SATQuizBlocker {
   constructor(supabaseClient) {
     this.supabaseClient = supabaseClient;
     this.isBlocked = false;
+    this.isReviewing = false;
     this.currentQuestion = null;
     this.attempts = 0;
     this.modal = null;
     console.log('🎓 SAT Quiz Blocker: Initializing...');
 
-    // Bind the event handler once to `this`
+    // Bind event handlers once to `this`
     this.boundPreventDefault = this.preventDefault.bind(this);
-
+    this.boundHandleWheel = this.handleWheel.bind(this);
+    
     this.init();
     this.setupMessageListener();
   }
@@ -109,47 +111,53 @@ class SATQuizBlocker {
     console.log('🎓 SAT Quiz Blocker: Blocking website...');
     this.isBlocked = true;
     
-    // Disable scrolling
+    // Disable scrolling on both html and body for better cross-browser support
+    document.documentElement.style.overflow = 'hidden';
     document.body.style.overflow = 'hidden';
     
-    // Disable all interactions using the bound handler
+    // Add event listeners for non-scroll events
     document.addEventListener('click', this.boundPreventDefault, true);
     document.addEventListener('keydown', this.boundPreventDefault, true);
-    document.addEventListener('scroll', this.boundPreventDefault, true);
-    document.addEventListener('wheel', this.boundPreventDefault, true);
     document.addEventListener('touchmove', this.boundPreventDefault, true);
+
+    // Add a dedicated, non-passive listener for wheel events to ensure we can prevent them
+    document.addEventListener('wheel', this.boundHandleWheel, { capture: true, passive: false });
     
     // Add overlay
     this.addOverlay();
   }
 
+  handleWheel(event) {
+    // Use elementFromPoint to get the topmost element under the cursor
+    const topElement = document.elementFromPoint(event.clientX, event.clientY);
+
+    // If the element under the cursor is inside our modal, let the event proceed.
+    // This allows the modal's content to be scrolled.
+    if (this.modal && this.modal.contains(topElement)) {
+      return;
+    }
+
+    // If we're outside the modal, block the wheel event to prevent background scroll.
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
   preventDefault(event) {
-    // Allow all interactions within the quiz modal
+    // This function now only handles non-wheel events like clicks and keydowns.
+    // The primary rule: if the event target is inside the modal, allow it.
     if (this.modal && this.modal.contains(event.target)) {
-      // For scroll events within the modal, prevent them from bubbling to the background
-      if (event.type === 'scroll' || event.type === 'wheel') {
-        event.stopPropagation();
-        return;
-      }
+      return;
+    }
+
+    // Secondary rule: if in review mode, allow clicks on the overlay to close the quiz.
+    if (this.isReviewing && event.type === 'click' && event.target.id === 'sat-quiz-overlay') {
+      this.unblockWebsite();
       return;
     }
     
-    // Allow overlay clicks when in review mode (after correct answer)
-    if (event.type === 'click' && event.target.id === 'sat-quiz-overlay') {
-      // Check if we're in review mode (countdown timer exists)
-      const countdownTimer = document.getElementById('countdown-timer');
-      if (countdownTimer) {
-        console.log('🎓 SAT Quiz Blocker: Overlay clicked during review mode, closing popup...');
-        this.unblockWebsite();
-        return;
-      } else {
-        console.log('🎓 SAT Quiz Blocker: Overlay clicked but not in review mode (no countdown timer)');
-      }
-    }
-    
+    // Default case: block every other event outside the modal.
     event.preventDefault();
     event.stopPropagation();
-    return false;
   }
 
   addOverlay() {
@@ -406,141 +414,100 @@ class SATQuizBlocker {
   }
 
   async handleSubmit() {
+    const submitBtn = this.modal.querySelector('#submit-answer');
+    submitBtn.disabled = true;
+    submitBtn.style.opacity = '0.5';
+    submitBtn.textContent = 'Submitting...';
+
     let userAnswer = '';
-    let isValid = false;
-    
     if (this.currentQuestion.question_type === 'multiple_choice') {
-      const selectedAnswer = document.querySelector('input[name="answer"]:checked');
-      if (selectedAnswer) {
-        userAnswer = selectedAnswer.value;
-        isValid = true;
-      } else {
-        this.showFeedback('Please select an answer.', 'error');
-        return;
-      }
+      const selectedAnswer = this.modal.querySelector('input[name="answer"]:checked');
+      userAnswer = selectedAnswer ? selectedAnswer.value : '';
     } else if (this.currentQuestion.question_type === 'numeric') {
-      const answerInput = document.querySelector('input[name="numeric-answer"]');
+      const answerInput = this.modal.querySelector('input[name="numeric-answer"]');
       userAnswer = answerInput.value.trim();
-      if (userAnswer) {
-        isValid = true;
-      } else {
-        this.showFeedback('Please enter an answer.', 'error');
-        return;
-      }
     }
-    
-    if (!isValid) return;
-    
-    const correctAnswer = this.currentQuestion.correct_answer;
-    let isCorrect = false;
-    
-    if (this.currentQuestion.question_type === 'multiple_choice') {
-      isCorrect = userAnswer === correctAnswer;
-    } else if (this.currentQuestion.question_type === 'numeric') {
-      // For numeric questions, compare the answers (case-insensitive for text answers)
-      isCorrect = userAnswer.toLowerCase() === correctAnswer.toLowerCase();
+
+    if (!userAnswer) {
+      this.showFeedback('Please select or enter an answer.', 'error');
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '1';
+      submitBtn.textContent = 'Submit Answer';
+      return;
     }
-    
+
+    const isCorrect = userAnswer.toLowerCase() === this.currentQuestion.correct_answer.toLowerCase();
+
     if (isCorrect) {
-      this.showFeedback('✅ Correct! Review the explanation below.', 'success');
-      
-      // Show explanation immediately if available
-      if (this.currentQuestion.explanation) {
-        this.showExplanation();
-      }
-      
-      await this.recordSuccess();
-      
-      // Maintain blocked state but allow modal scrolling
-      this.maintainBlockedState();
-      
-      // Start countdown timer
-      this.startCountdownTimer();
-      
-      // Allow clicking outside modal to close immediately
-      this.enableClickOutsideToClose();
-      
+      await this.handleCorrectAnswer();
     } else {
-      this.attempts++;
-      const remainingAttempts = EXTENSION_CONFIG.maxAttempts - this.attempts;
-      
-      if (remainingAttempts > 0) {
-        this.showFeedback(`❌ Incorrect. ${remainingAttempts} attempts remaining.`, 'error');
-        this.updateAttemptsDisplay();
-      } else {
-        this.showFeedback('❌ No more attempts. Please try again later.', 'error');
-        if (this.currentQuestion.explanation) {
-          setTimeout(() => {
-            this.showExplanation();
-          }, 1000);
-        }
-        setTimeout(() => {
-          this.unblockWebsite();
-        }, 3000);
-      }
+      this.handleIncorrectAnswer();
     }
   }
 
-  startCountdownTimer() {
-    const timeInSeconds = Math.ceil(EXTENSION_CONFIG.explanationReviewTime / 1000);
-    let timeLeft = timeInSeconds;
-    const feedback = document.getElementById('feedback');
-    
-    // Create countdown display
-    const countdownDiv = document.createElement('div');
-    countdownDiv.id = 'countdown-timer';
-    countdownDiv.style.cssText = `
-      margin-top: 10px;
-      font-size: 14px;
-      color: #007bff;
-      font-weight: 500;
-    `;
-    
-    if (feedback) {
-      feedback.appendChild(countdownDiv);
+  async handleCorrectAnswer() {
+    this.isReviewing = true; // Enter review mode
+    this.showFeedback('✅ Correct! Well done.', 'success');
+    this.showExplanation();
+    await this.recordSuccess();
+
+    // Disable all inputs in the modal
+    this.modal.querySelectorAll('input, button').forEach(el => el.disabled = true);
+
+    // Wait for explanation review time before unblocking
+    const reviewTime = EXTENSION_CONFIG.explanationReviewTime || 10000;
+    this.startCooldownTimer(reviewTime, () => this.unblockWebsite());
+  }
+
+  handleIncorrectAnswer() {
+    this.attempts++;
+    this.updateAttemptsDisplay();
+    const remainingAttempts = EXTENSION_CONFIG.maxAttempts - this.attempts;
+
+    if (remainingAttempts > 0) {
+      this.showFeedback(`❌ Incorrect. You have ${remainingAttempts} attempts left.`, 'error');
+      const submitBtn = this.modal.querySelector('#submit-answer');
+      submitBtn.disabled = false;
+      submitBtn.style.opacity = '1';
+      submitBtn.textContent = 'Submit Answer';
+    } else {
+      this.handleMaxAttempts();
     }
+  }
+
+  handleMaxAttempts() {
+    this.isReviewing = true; // Enter review mode
+    this.showFeedback('❌ You have reached the maximum number of attempts.', 'error');
+    this.showExplanation(true); // Show explanation and reveal correct answer
+
+    // Disable all inputs in the modal
+    this.modal.querySelectorAll('input, button').forEach(el => el.disabled = true);
     
-    const updateCountdown = () => {
+    // Start a "cooldown" period before unblocking
+    const cooldownTime = EXTENSION_CONFIG.cooldownPeriod || 15000;
+    this.startCooldownTimer(cooldownTime, () => this.unblockWebsite());
+  }
+  
+  startCooldownTimer(duration, callback) {
+    let timeLeft = Math.ceil(duration / 1000);
+    const timerDisplay = document.createElement('div');
+    timerDisplay.id = 'cooldown-timer';
+    timerDisplay.style.cssText = `margin-top: 15px; color: #6c757d; font-weight: 500;`;
+    this.modal.querySelector('#feedback').appendChild(timerDisplay);
+
+    const updateTimer = () => {
       if (timeLeft > 0) {
-        countdownDiv.textContent = `Popup will close in ${timeLeft} seconds... (Click outside to close immediately)`;
+        timerDisplay.textContent = `You can continue in ${timeLeft}s. (Or click outside to close)`;
         timeLeft--;
-        setTimeout(updateCountdown, 1000);
+        setTimeout(updateTimer, 1000);
       } else {
-        this.unblockWebsite();
+        callback();
       }
     };
-    
-    updateCountdown();
+    updateTimer();
   }
 
-  enableClickOutsideToClose() {
-    console.log('🎓 SAT Quiz Blocker: Enabling click outside to close functionality...');
-    
-    // Add click handler to modal to prevent event bubbling
-    if (this.modal) {
-      const handleModalClick = (event) => {
-        // Stop the event from bubbling up to the overlay
-        event.stopPropagation();
-        console.log('🎓 SAT Quiz Blocker: Modal clicked, preventing event bubbling');
-      };
-      
-      // Remove any existing handler first
-      if (this.modalClickHandler) {
-        this.modal.removeEventListener('click', this.modalClickHandler);
-      }
-      
-      this.modal.addEventListener('click', handleModalClick);
-      
-      // Store the modal click handler for cleanup
-      this.modalClickHandler = handleModalClick;
-      
-      console.log('🎓 SAT Quiz Blocker: Modal click handler added successfully');
-    } else {
-      console.error('🎓 SAT Quiz Blocker: Modal not found when trying to enable click outside');
-    }
-  }
-
-  showExplanation() {
+  showExplanation(revealAnswer = false) {
     const feedback = document.getElementById('feedback');
     if (feedback && this.currentQuestion.explanation) {
       // Remove any existing explanation
@@ -565,11 +532,29 @@ class SATQuizBlocker {
         overflow-wrap: break-word;
       `;
       
+      let revealHtml = '';
+      if (revealAnswer) {
+        const correctAnswer = this.currentQuestion.correct_answer;
+        let correctAnswerText = correctAnswer;
+        
+        if (this.currentQuestion.question_type === 'multiple_choice') {
+          const correctIndex = correctAnswer.charCodeAt(0) - 65;
+          correctAnswerText = this.currentQuestion.answer_choices[correctIndex];
+        }
+
+        revealHtml = `
+          <div style="padding: 10px; background: #fff3cd; border-radius: 6px; margin-bottom: 12px; color: #856404;">
+            <strong>The correct answer is:</strong> ${correctAnswer} (${correctAnswerText})
+          </div>
+        `;
+      }
+      
       explanationDiv.innerHTML = `
         <div style="font-weight: 600; color: #1976d2; margin-bottom: 8px; display: flex; align-items: center;">
           <span style="margin-right: 8px;">💡</span>
           Explanation
         </div>
+        ${revealHtml}
         <div style="line-height: 1.5; color: #333; white-space: pre-wrap;">
           ${this.currentQuestion.explanation}
         </div>
@@ -639,23 +624,19 @@ class SATQuizBlocker {
   }
 
   unblockWebsite() {
+    console.log('🎓 SAT Quiz Blocker: Unblocking website...');
     this.isBlocked = false;
-    
+    this.isReviewing = false;
+
     // Re-enable scrolling
+    document.documentElement.style.overflow = '';
     document.body.style.overflow = '';
-    
-    // Remove event listeners using the same bound handler
+
+    // Remove event listeners
     document.removeEventListener('click', this.boundPreventDefault, true);
     document.removeEventListener('keydown', this.boundPreventDefault, true);
-    document.removeEventListener('scroll', this.boundPreventDefault, true);
-    document.removeEventListener('wheel', this.boundPreventDefault, true);
     document.removeEventListener('touchmove', this.boundPreventDefault, true);
-    
-    // Remove modal click handler if it exists
-    if (this.modal && this.modalClickHandler) {
-      this.modal.removeEventListener('click', this.modalClickHandler);
-      this.modalClickHandler = null;
-    }
+    document.removeEventListener('wheel', this.boundHandleWheel, { capture: true, passive: false });
     
     // Remove overlay and modal
     const overlay = document.getElementById('sat-quiz-overlay');
