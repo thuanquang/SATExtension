@@ -106,8 +106,39 @@ class SupabaseClient {
 
   // Get random SAT question with filtering
   async getRandomQuestion() {
+    let attempts = 0;
+    const maxAttempts = 5; // Prevent infinite loops
+
+    while (attempts < maxAttempts) {
+      attempts++;
+      console.log(`🎓 Supabase Client: Getting random question (Attempt ${attempts}/${maxAttempts})...`);
+      
+      try {
+        const questionData = await this.fetchRandomQuestionFromDB();
+        
+        if (questionData) {
+          const formattedQuestion = this.formatQuestion(questionData);
+          if (formattedQuestion) {
+            console.log('🎓 Supabase Client: Successfully fetched and formatted question:', formattedQuestion);
+            return formattedQuestion;
+          } else {
+            console.log('🎓 Supabase Client: Question failed validation, retrying...');
+          }
+        } else {
+          console.log('🎓 Supabase Client: No question data returned from fetch, retrying...');
+        }
+      } catch (error) {
+        console.error('🎓 Supabase Client: Error fetching random question, retrying...', error);
+      }
+    }
+    
+    console.error(`🎓 Supabase Client: Failed to get a valid question after ${maxAttempts} attempts.`);
+    return null;
+  }
+
+  async fetchRandomQuestionFromDB() {
     try {
-      console.log('🎓 Supabase Client: Getting random question...');
+      console.log('🎓 Supabase Client: Fetching a random question from the database...');
       const client = await this.createClient();
       
       // Build filter conditions
@@ -159,7 +190,7 @@ class SupabaseClient {
         const selectedQuestion = data[randomIndex];
         console.log('🎓 Supabase Client: Selected question index:', randomIndex);
         console.log('🎓 Supabase Client: Selected question:', selectedQuestion);
-        return this.formatQuestion(selectedQuestion);
+        return selectedQuestion;
       }
       
       console.log('🎓 Supabase Client: No questions match filters, trying fallback...');
@@ -190,40 +221,37 @@ class SupabaseClient {
         const selectedQuestion = fallbackData[randomIndex];
         console.log('🎓 Supabase Client: Selected fallback question index:', randomIndex);
         console.log('🎓 Supabase Client: Selected fallback question:', selectedQuestion);
-        return this.formatQuestion(selectedQuestion);
+        return selectedQuestion;
       }
       
       console.log('🎓 Supabase Client: No questions available in database');
       return null;
     } catch (error) {
-      console.error('🎓 Supabase Client: Error fetching question:', error);
-      return null;
+      console.error('🎓 Supabase Client: Error fetching question from DB:', error);
+      throw error; // Re-throw to be handled by the calling function
     }
   }
 
   // Format question to match the expected structure
   formatQuestion(question) {
     console.log('🎓 Supabase Client: Formatting question:', question);
+
+    if (!question || !question.question_text || !question.question_text.trim()) {
+      console.error('🎓 Supabase Client: Question is null or missing text:', question);
+      return null;
+    }
     
     if (question.question_type === 'multiple_choice') {
       // For multiple choice questions, convert to the expected format
-      const choices = question.answer_choices || [];
-      const correctIndex = parseInt(question.correct_answer) - 1; // Convert from 1-based to 0-based
-      
-      // Validate answer choices
-      if (!Array.isArray(choices) || choices.length === 0) {
-        console.error('🎓 Supabase Client: Invalid answer_choices for question:', question.question_id);
-        console.error('🎓 Supabase Client: answer_choices:', choices);
+      const choices = (question.answer_choices || []).filter(c => c && String(c).trim());
+
+      // Validate that there are enough valid choices
+      if (choices.length < 2) { // Assuming at least 2 options are required
+        console.error('🎓 Supabase Client: Not enough valid answer choices for question:', question.question_id);
         return null;
       }
       
-      // Check for empty or null choices
-      const validChoices = choices.filter(choice => choice && choice.trim() !== '');
-      if (validChoices.length !== choices.length) {
-        console.error('🎓 Supabase Client: Found empty choices in question:', question.question_id);
-        console.error('🎓 Supabase Client: Original choices:', choices);
-        console.error('🎓 Supabase Client: Valid choices:', validChoices);
-      }
+      const correctIndex = parseInt(question.correct_answer) - 1; // Convert from 1-based to 0-based
       
       // Validate correct answer index
       if (isNaN(correctIndex) || correctIndex < 0 || correctIndex >= choices.length) {
@@ -251,7 +279,12 @@ class SupabaseClient {
       console.log('🎓 Supabase Client: Formatted multiple choice question:', formattedQuestion);
       return formattedQuestion;
     } else if (question.question_type === 'numeric') {
-      // For numeric questions
+      // For numeric questions, ensure correct_answer is valid
+      if (question.correct_answer === null || String(question.correct_answer).trim() === '') {
+        console.error('🎓 Supabase Client: Numeric question missing correct answer:', question.question_id);
+        return null;
+      }
+
       const formattedQuestion = {
         id: question.question_id,
         question_text: question.question_text,
@@ -260,7 +293,7 @@ class SupabaseClient {
         difficulty: question.difficulty,
         tag: question.tag,
         question_type: question.question_type,
-        correct_answer: question.correct_answer,
+        correct_answer: String(question.correct_answer).trim(),
         answer_choices: []
       };
       
@@ -268,7 +301,7 @@ class SupabaseClient {
       return formattedQuestion;
     }
     
-    console.log('🎓 Supabase Client: Returning unformatted question:', question);
+    console.log('🎓 Supabase Client: Returning unformatted question due to unknown type:', question);
     return question;
   }
 

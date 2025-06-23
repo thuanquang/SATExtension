@@ -126,7 +126,25 @@ class SATQuizBlocker {
   preventDefault(event) {
     // Allow all interactions within the quiz modal
     if (this.modal && this.modal.contains(event.target)) {
+      // For scroll events within the modal, prevent them from bubbling to the background
+      if (event.type === 'scroll' || event.type === 'wheel') {
+        event.stopPropagation();
+        return;
+      }
       return;
+    }
+    
+    // Allow overlay clicks when in review mode (after correct answer)
+    if (event.type === 'click' && event.target.id === 'sat-quiz-overlay') {
+      // Check if we're in review mode (countdown timer exists)
+      const countdownTimer = document.getElementById('countdown-timer');
+      if (countdownTimer) {
+        console.log('🎓 SAT Quiz Blocker: Overlay clicked during review mode, closing popup...');
+        this.unblockWebsite();
+        return;
+      } else {
+        console.log('🎓 SAT Quiz Blocker: Overlay clicked but not in review mode (no countdown timer)');
+      }
     }
     
     event.preventDefault();
@@ -156,48 +174,19 @@ class SATQuizBlocker {
   async showQuiz() {
     try {
       console.log('🎓 SAT Quiz Blocker: Fetching question from Supabase...');
-      // Get random question from Supabase
+      // Get random question from Supabase (already validated)
       this.currentQuestion = await this.supabaseClient.getRandomQuestion();
       
       console.log('🎓 SAT Quiz Blocker: Question received:', this.currentQuestion);
       
       if (!this.currentQuestion) {
-        console.error('🎓 SAT Quiz Blocker: No questions available');
+        console.error('🎓 SAT Quiz Blocker: No valid questions available after multiple attempts.');
         this.unblockWebsite();
         return;
-      }
-      
-      // Validate question data
-      if (!this.currentQuestion.question_text) {
-        console.error('🎓 SAT Quiz Blocker: Question missing text:', this.currentQuestion);
-        this.unblockWebsite();
-        return;
-      }
-      
-      if (this.currentQuestion.question_type === 'multiple_choice') {
-        const choices = this.currentQuestion.answer_choices || [];
-        if (!Array.isArray(choices) || choices.length === 0) {
-          console.error('🎓 SAT Quiz Blocker: Multiple choice question missing valid choices:', this.currentQuestion);
-          this.unblockWebsite();
-          return;
-        }
-        
-        // Check for empty choices
-        const validChoices = choices.filter(choice => choice && choice.trim() !== '');
-        if (validChoices.length !== choices.length) {
-          console.error('🎓 SAT Quiz Blocker: Question has empty choices:', this.currentQuestion);
-          console.error('🎓 SAT Quiz Blocker: Valid choices count:', validChoices.length, 'Total choices:', choices.length);
-        }
-        
-        if (!this.currentQuestion.correct_answer) {
-          console.error('🎓 SAT Quiz Blocker: Multiple choice question missing correct answer:', this.currentQuestion);
-          this.unblockWebsite();
-          return;
-        }
       }
 
-      // Create and show modal
-      console.log('🎓 SAT Quiz Blocker: Creating modal...');
+      // No need for further validation here, as it's done in the client
+      console.log('🎓 SAT Quiz Blocker: Creating modal for validated question...');
       this.createModal();
       this.showModal();
       
@@ -218,16 +207,49 @@ class SATQuizBlocker {
       left: 50%;
       transform: translate(-50%, -50%);
       background: white;
-      padding: 30px;
       border-radius: 12px;
       box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
       z-index: 1000000;
       max-width: 500px;
       width: 90%;
-      max-height: 80vh;
-      overflow-y: auto;
+      max-height: 85vh;
+      display: flex;
+      flex-direction: column;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     `;
+
+    // Create scrollable content area
+    const contentArea = modal.querySelector('.quiz-content');
+    if (contentArea) {
+      contentArea.style.cssText = `
+        flex: 1;
+        overflow-y: auto;
+        padding: 30px;
+        padding-bottom: 20px;
+      `;
+      
+      // Add specific scroll event handling to prevent background scrolling
+      contentArea.addEventListener('scroll', (event) => {
+        event.stopPropagation();
+      }, true);
+      
+      contentArea.addEventListener('wheel', (event) => {
+        event.stopPropagation();
+      }, true);
+    }
+
+    // Ensure footer stays at bottom
+    const footer = modal.querySelector('.quiz-footer');
+    if (footer) {
+      footer.style.cssText = `
+        padding: 20px 30px;
+        text-align: center;
+        border-top: 1px solid #e0e0e0;
+        background: white;
+        border-radius: 0 0 12px 12px;
+        flex-shrink: 0;
+      `;
+    }
 
     // Add event listeners
     const submitBtn = modal.querySelector('#submit-answer');
@@ -272,33 +294,21 @@ class SATQuizBlocker {
     let questionContent = '';
     
     if (question.question_type === 'multiple_choice') {
-      const options = question.answer_choices || [question.option_a, question.option_b, question.option_c, question.option_d];
+      // The answer_choices are already validated and filtered by supabase-client.js
+      const options = question.answer_choices;
       
-      // Filter out empty or null options
-      const validOptions = options.filter(option => option && option.trim() !== '');
+      console.log('🎓 SAT Quiz Blocker: Rendering options:', options);
       
-      console.log('🎓 SAT Quiz Blocker: Original options:', options);
-      console.log('🎓 SAT Quiz Blocker: Valid options:', validOptions);
-      
-      if (validOptions.length === 0) {
-        console.error('🎓 SAT Quiz Blocker: No valid options found for question:', question);
-        questionContent = `
-          <div class="quiz-options" style="color: #dc3545; padding: 20px; text-align: center;">
-            <p>Error: No valid answer options available for this question.</p>
-          </div>
-        `;
-      } else {
-        questionContent = `
-          <div class="quiz-options">
-            ${validOptions.map((option, index) => `
-              <label class="option-label" style="display: block; margin: 10px 0; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-                <input type="radio" name="answer" value="${String.fromCharCode(65 + index)}" style="margin-right: 10px;">
-                <span style="font-weight: 500;">${String.fromCharCode(65 + index)}.</span> ${option}
-              </label>
-            `).join('')}
-          </div>
-        `;
-      }
+      questionContent = `
+        <div class="quiz-options">
+          ${options.map((option, index) => `
+            <label class="option-label" style="display: block; margin: 10px 0; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+              <input type="radio" name="answer" value="${String.fromCharCode(65 + index)}" style="margin-right: 10px;">
+              <span style="font-weight: 500;">${String.fromCharCode(65 + index)}.</span> ${option}
+            </label>
+          `).join('')}
+        </div>
+      `;
     } else if (question.question_type === 'numeric') {
       questionContent = `
         <div class="numeric-input" style="margin: 20px 0;">
@@ -309,46 +319,48 @@ class SATQuizBlocker {
     }
     
     return `
-      <div class="quiz-header">
-        <h2 style="margin: 0 0 20px 0; color: #333; font-size: 24px;">
-          🎓 SAT Quiz Required
-        </h2>
-        <p style="margin: 0 0 20px 0; color: #666; font-size: 14px;">
-          Answer this question correctly to continue browsing
-        </p>
-        <div style="margin-bottom: 15px; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 12px; color: #666;">
-          <strong>Category:</strong> ${question.tag} | <strong>Difficulty:</strong> ${question.difficulty}
+      <div class="quiz-content">
+        <div class="quiz-header">
+          <h2 style="margin: 0 0 20px 0; color: #333; font-size: 24px;">
+            🎓 SAT Quiz Required
+          </h2>
+          <p style="margin: 0 0 20px 0; color: #666; font-size: 14px;">
+            Answer this question correctly to continue browsing
+          </p>
+          <div style="margin-bottom: 15px; padding: 8px 12px; background: #f8f9fa; border-radius: 6px; font-size: 12px; color: #666;">
+            <strong>Category:</strong> ${question.tag} | <strong>Difficulty:</strong> ${question.difficulty}
+          </div>
+        </div>
+        
+        <div class="quiz-question">
+          <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">
+            ${question.question_text}
+          </h3>
+          
+          ${question.instructions ? `
+            <div style="margin: 15px 0;">
+              <button id="instruction-toggle" style="
+                background: #6c757d;
+                color: white;
+                border: none;
+                padding: 8px 16px;
+                border-radius: 4px;
+                font-size: 12px;
+                cursor: pointer;
+                transition: all 0.2s;
+                margin-bottom: 10px;
+              ">📖 Show Instructions</button>
+              <div id="instruction-box" style="display: none; margin: 15px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; font-size: 14px; color: #1976d2;">
+                <strong>Instructions:</strong> ${question.instructions}
+              </div>
+            </div>
+          ` : ''}
+          
+          ${questionContent}
         </div>
       </div>
       
-      <div class="quiz-question">
-        <h3 style="margin: 0 0 15px 0; color: #333; font-size: 18px;">
-          ${question.question_text}
-        </h3>
-        
-        ${question.instructions ? `
-          <div style="margin: 15px 0;">
-            <button id="instruction-toggle" style="
-              background: #6c757d;
-              color: white;
-              border: none;
-              padding: 8px 16px;
-              border-radius: 4px;
-              font-size: 12px;
-              cursor: pointer;
-              transition: all 0.2s;
-              margin-bottom: 10px;
-            ">📖 Show Instructions</button>
-            <div id="instruction-box" style="display: none; margin: 15px 0; padding: 10px; background: #e3f2fd; border-left: 4px solid #2196f3; border-radius: 4px; font-size: 14px; color: #1976d2;">
-              <strong>Instructions:</strong> ${question.instructions}
-            </div>
-          </div>
-        ` : ''}
-        
-        ${questionContent}
-      </div>
-      
-      <div class="quiz-footer" style="margin-top: 25px; text-align: center;">
+      <div class="quiz-footer">
         <button id="submit-answer" style="
           background: #007bff;
           color: white;
@@ -383,6 +395,14 @@ class SATQuizBlocker {
     if (this.modal) {
       this.modal.style.display = 'none';
     }
+  }
+
+  maintainBlockedState() {
+    console.log('🎓 SAT Quiz Blocker: Maintaining blocked state for explanation review...');
+    // Keep the website blocked but allow scrolling within the modal
+    // The body overflow remains hidden, but scroll events within modal are allowed
+    this.isBlocked = true;
+    document.body.style.overflow = 'hidden';
   }
 
   async handleSubmit() {
@@ -422,16 +442,24 @@ class SATQuizBlocker {
     }
     
     if (isCorrect) {
-      this.showFeedback('✅ Correct! You can now continue browsing.', 'success');
+      this.showFeedback('✅ Correct! Review the explanation below.', 'success');
+      
+      // Show explanation immediately if available
       if (this.currentQuestion.explanation) {
-        setTimeout(() => {
-          this.showExplanation();
-        }, 1000);
+        this.showExplanation();
       }
+      
       await this.recordSuccess();
-      setTimeout(() => {
-        this.unblockWebsite();
-      }, 2000);
+      
+      // Maintain blocked state but allow modal scrolling
+      this.maintainBlockedState();
+      
+      // Start countdown timer
+      this.startCountdownTimer();
+      
+      // Allow clicking outside modal to close immediately
+      this.enableClickOutsideToClose();
+      
     } else {
       this.attempts++;
       const remainingAttempts = EXTENSION_CONFIG.maxAttempts - this.attempts;
@@ -453,22 +481,137 @@ class SATQuizBlocker {
     }
   }
 
+  startCountdownTimer() {
+    const timeInSeconds = Math.ceil(EXTENSION_CONFIG.explanationReviewTime / 1000);
+    let timeLeft = timeInSeconds;
+    const feedback = document.getElementById('feedback');
+    
+    // Create countdown display
+    const countdownDiv = document.createElement('div');
+    countdownDiv.id = 'countdown-timer';
+    countdownDiv.style.cssText = `
+      margin-top: 10px;
+      font-size: 14px;
+      color: #007bff;
+      font-weight: 500;
+    `;
+    
+    if (feedback) {
+      feedback.appendChild(countdownDiv);
+    }
+    
+    const updateCountdown = () => {
+      if (timeLeft > 0) {
+        countdownDiv.textContent = `Popup will close in ${timeLeft} seconds... (Click outside to close immediately)`;
+        timeLeft--;
+        setTimeout(updateCountdown, 1000);
+      } else {
+        this.unblockWebsite();
+      }
+    };
+    
+    updateCountdown();
+  }
+
+  enableClickOutsideToClose() {
+    console.log('🎓 SAT Quiz Blocker: Enabling click outside to close functionality...');
+    
+    // Add click handler to modal to prevent event bubbling
+    if (this.modal) {
+      const handleModalClick = (event) => {
+        // Stop the event from bubbling up to the overlay
+        event.stopPropagation();
+        console.log('🎓 SAT Quiz Blocker: Modal clicked, preventing event bubbling');
+      };
+      
+      // Remove any existing handler first
+      if (this.modalClickHandler) {
+        this.modal.removeEventListener('click', this.modalClickHandler);
+      }
+      
+      this.modal.addEventListener('click', handleModalClick);
+      
+      // Store the modal click handler for cleanup
+      this.modalClickHandler = handleModalClick;
+      
+      console.log('🎓 SAT Quiz Blocker: Modal click handler added successfully');
+    } else {
+      console.error('🎓 SAT Quiz Blocker: Modal not found when trying to enable click outside');
+    }
+  }
+
   showExplanation() {
     const feedback = document.getElementById('feedback');
     if (feedback && this.currentQuestion.explanation) {
-      feedback.innerHTML = `
-        <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 14px; text-align: left;">
-          <strong>Explanation:</strong> ${this.currentQuestion.explanation}
+      // Remove any existing explanation
+      const existingExplanation = feedback.querySelector('.explanation-box');
+      if (existingExplanation) {
+        existingExplanation.remove();
+      }
+      
+      const explanationDiv = document.createElement('div');
+      explanationDiv.className = 'explanation-box';
+      explanationDiv.style.cssText = `
+        margin-top: 15px;
+        padding: 15px;
+        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+        border: 2px solid #2196f3;
+        border-radius: 8px;
+        font-size: 14px;
+        text-align: left;
+        box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+        position: relative;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+      `;
+      
+      explanationDiv.innerHTML = `
+        <div style="font-weight: 600; color: #1976d2; margin-bottom: 8px; display: flex; align-items: center;">
+          <span style="margin-right: 8px;">💡</span>
+          Explanation
+        </div>
+        <div style="line-height: 1.5; color: #333; white-space: pre-wrap;">
+          ${this.currentQuestion.explanation}
         </div>
       `;
+      
+      feedback.appendChild(explanationDiv);
+      
+      // Scroll to the explanation if it's not fully visible
+      setTimeout(() => {
+        const contentArea = this.modal.querySelector('.quiz-content');
+        if (contentArea) {
+          const explanationRect = explanationDiv.getBoundingClientRect();
+          const contentRect = contentArea.getBoundingClientRect();
+          
+          if (explanationRect.bottom > contentRect.bottom) {
+            explanationDiv.scrollIntoView({ 
+              behavior: 'smooth', 
+              block: 'nearest' 
+            });
+          }
+        }
+      }, 100);
     }
   }
 
   showFeedback(message, type) {
     const feedback = document.getElementById('feedback');
     if (feedback) {
-      feedback.textContent = message;
-      feedback.style.color = type === 'success' ? '#28a745' : '#dc3545';
+      // Find the feedback text element or create one
+      let feedbackText = feedback.querySelector('.feedback-text');
+      if (!feedbackText) {
+        feedbackText = document.createElement('div');
+        feedbackText.className = 'feedback-text';
+        feedbackText.style.cssText = `
+          margin-bottom: 10px;
+          font-weight: 500;
+        `;
+        feedback.insertBefore(feedbackText, feedback.firstChild);
+      }
+      
+      feedbackText.textContent = message;
+      feedbackText.style.color = type === 'success' ? '#28a745' : '#dc3545';
     }
   }
 
@@ -507,6 +650,12 @@ class SATQuizBlocker {
     document.removeEventListener('scroll', this.boundPreventDefault, true);
     document.removeEventListener('wheel', this.boundPreventDefault, true);
     document.removeEventListener('touchmove', this.boundPreventDefault, true);
+    
+    // Remove modal click handler if it exists
+    if (this.modal && this.modalClickHandler) {
+      this.modal.removeEventListener('click', this.modalClickHandler);
+      this.modalClickHandler = null;
+    }
     
     // Remove overlay and modal
     const overlay = document.getElementById('sat-quiz-overlay');

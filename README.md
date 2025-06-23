@@ -11,6 +11,7 @@ A Chrome extension that blocks specified websites and prompts the user with an S
 -   **⚙️ Advanced Filtering**: Filter questions by difficulty level (`easy`, `medium`, `hard`) and custom tags (e.g., 'Algebra', 'Grammar').
 -   **🎛️ User Controls**: A simple popup allows you to toggle the extension on/off, force a quiz immediately, and reset your stats.
 -   **📊 Progress Tracking**: Keeps track of how many questions you've answered correctly.
+-   **⏱️ Enhanced User Experience**: When you answer correctly, enjoy a 10-second countdown timer with immediate explanation display and the ability to click outside to close.
 -   **🐛 Debugging Tools**: Includes a `test-connection.html` page to diagnose issues with your Supabase setup.
 -   **🏗️ Sophisticated Schema**: Built on a robust PostgreSQL schema that organizes questions into tests and sections.
 
@@ -86,6 +87,9 @@ const EXTENSION_CONFIG = {
   // The extension will try to fetch questions matching these tags.
   // Leave empty to get questions with any tag.
   preferredTags: ['Algebra', 'Geometry'],
+  
+  // How long to wait before auto-closing the popup when reviewing explanations (in milliseconds)
+  explanationReviewTime: 10 * 1000, // Default: 10 seconds
 };
 
 // --- Websites to Block ---
@@ -106,6 +110,18 @@ const BLOCKED_SITES = [
 ### The Quiz Modal
 
 When you visit a blocked site, a quiz modal will appear, blocking the page. You must select an answer (for multiple-choice) or type your answer (for numeric questions) and click "Submit". If you are correct, the page will become accessible.
+
+#### Enhanced User Experience with Countdown Timer
+
+When you answer a question correctly, the extension now provides an enhanced experience:
+
+- **📖 Immediate Explanation**: If the question has an explanation, it appears immediately with enhanced styling
+- **⏱️ 10-Second Countdown**: A visual countdown timer shows when the popup will close automatically (configurable in `config.js`)
+- **🖱️ Click to Close**: You can click outside the popup to close it immediately instead of waiting
+- **🎨 Better Visual Design**: Explanations are displayed in an attractive gradient box with clear formatting
+- **📱 Scrollable Content**: Long explanations can be scrolled within the popup without affecting the background page
+
+This gives you time to review the explanation and understand why your answer was correct before continuing to browse.
 
 ### Extension Popup
 

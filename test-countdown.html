@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT Quiz Countdown Timer Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .explanation-box {
+            margin-top: 15px;
+            padding: 15px;
+            background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+            border: 2px solid #2196f3;
+            border-radius: 8px;
+            font-size: 14px;
+            text-align: left;
+            box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+        }
+        .countdown-timer {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #007bff;
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎓 SAT Quiz Countdown Timer Test</h1>
+        <p>This page demonstrates the new countdown timer functionality when users answer correctly.</p>
+        
+        <h3>New Features:</h3>
+        <ul>
+            <li>✅ <strong>10-second countdown timer</strong> when answer is correct (configurable)</li>
+            <li>✅ <strong>Click outside popup</strong> to close immediately (fixed)</li>
+            <li>✅ <strong>Enhanced explanation display</strong> with better styling</li>
+            <li>✅ <strong>Immediate explanation</strong> shown when correct</li>
+            <li>✅ <strong>Scrollable popup content</strong> - users can scroll within the popup to read long explanations</li>
+            <li>✅ <strong>Background page remains blocked</strong> until popup closes</li>
+            <li>✅ <strong>Configurable review time</strong> - adjust in config.js</li>
+        </ul>
+        
+        <h3>Test the Countdown:</h3>
+        <button class="test-button" onclick="simulateCorrectAnswer()">Simulate Correct Answer</button>
+        <button class="test-button" onclick="simulateIncorrectAnswer()">Simulate Incorrect Answer</button>
+        <button class="test-button" onclick="simulateLongExplanation()">Test Long Explanation (Scrollable)</button>
+        <button class="test-button" onclick="testClickOutside()">Test Click Outside Functionality</button>
+        
+        <div id="feedback" style="margin-top: 20px;"></div>
+        
+        <div style="margin-top: 30px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+            <h4>How it works:</h4>
+            <ol>
+                <li>When user answers correctly, explanation appears immediately</li>
+                <li>10-second countdown timer starts with visual feedback</li>
+                <li>User can click outside the popup to close immediately</li>
+                <li>After 10 seconds, popup closes automatically</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function simulateCorrectAnswer() {
+            const feedback = document.getElementById('feedback');
+            
+            // Clear previous content
+            feedback.innerHTML = '';
+            
+            // Show success message
+            const feedbackText = document.createElement('div');
+            feedbackText.className = 'feedback-text';
+            feedbackText.style.cssText = 'margin-bottom: 10px; font-weight: 500; color: #28a745;';
+            feedbackText.textContent = '✅ Correct! Review the explanation below.';
+            feedback.appendChild(feedbackText);
+            
+            // Show explanation
+            const explanationDiv = document.createElement('div');
+            explanationDiv.className = 'explanation-box';
+            explanationDiv.innerHTML = `
+                <div style="font-weight: 600; color: #1976d2; margin-bottom: 8px; display: flex; align-items: center;">
+                    <span style="margin-right: 8px;">💡</span>
+                    Explanation
+                </div>
+                <div style="line-height: 1.5; color: #333;">
+                    This is a sample explanation that demonstrates how the explanation box will look when a user answers correctly. 
+                    The explanation appears immediately and is styled with a gradient background and blue border to make it stand out.
+                </div>
+            `;
+            feedback.appendChild(explanationDiv);
+            
+            // Start countdown
+            startCountdown();
+        }
+        
+        function simulateIncorrectAnswer() {
+            const feedback = document.getElementById('feedback');
+            
+            // Clear previous content
+            feedback.innerHTML = '';
+            
+            // Show error message
+            const feedbackText = document.createElement('div');
+            feedbackText.className = 'feedback-text';
+            feedbackText.style.cssText = 'margin-bottom: 10px; font-weight: 500; color: #dc3545;';
+            feedbackText.textContent = '❌ Incorrect. 2 attempts remaining.';
+            feedback.appendChild(feedbackText);
+        }
+        
+        function simulateLongExplanation() {
+            const feedback = document.getElementById('feedback');
+            
+            // Clear previous content
+            feedback.innerHTML = '';
+            
+            // Show success message
+            const feedbackText = document.createElement('div');
+            feedbackText.className = 'feedback-text';
+            feedbackText.style.cssText = 'margin-bottom: 10px; font-weight: 500; color: #28a745;';
+            feedbackText.textContent = '✅ Correct! Review the detailed explanation below.';
+            feedback.appendChild(feedbackText);
+            
+            // Show very long explanation to test scrolling
+            const explanationDiv = document.createElement('div');
+            explanationDiv.className = 'explanation-box';
+            explanationDiv.style.cssText = `
+                margin-top: 15px;
+                padding: 15px;
+                background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+                border: 2px solid #2196f3;
+                border-radius: 8px;
+                font-size: 14px;
+                text-align: left;
+                box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
+                max-height: 300px;
+                overflow-y: auto;
+            `;
+            
+            const longExplanation = `
+                This is a very detailed explanation that demonstrates how the scrolling functionality works within the popup when users answer correctly. 
+                
+                The explanation box now has proper scrolling capabilities, allowing users to read through lengthy explanations without the popup becoming unwieldy or interfering with the background page.
+                
+                Key improvements include:
+                • The background page remains blocked until the popup closes
+                • Scroll events within the modal are properly contained
+                • The explanation area has its own scrollable container
+                • Users can comfortably read long explanations
+                • The countdown timer remains visible at the bottom
+                
+                This ensures that users can take their time to understand why their answer was correct, while still maintaining the productivity benefits of the website blocking functionality.
+                
+                The scrolling behavior is now properly isolated to the modal content, preventing any interference with the background page scrolling. This creates a much better user experience when reviewing detailed explanations.
+                
+                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+                
+                Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                
+                Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.
+            `;
+            
+            explanationDiv.innerHTML = `
+                <div style="font-weight: 600; color: #1976d2; margin-bottom: 8px; display: flex; align-items: center;">
+                    <span style="margin-right: 8px;">💡</span>
+                    Detailed Explanation (Scrollable)
+                </div>
+                <div style="line-height: 1.5; color: #333; white-space: pre-wrap;">
+                    ${longExplanation}
+                </div>
+            `;
+            
+            feedback.appendChild(explanationDiv);
+            
+            // Start countdown
+            startCountdown();
+        }
+        
+        function testClickOutside() {
+            const feedback = document.getElementById('feedback');
+            
+            // Clear previous content
+            feedback.innerHTML = '';
+            
+            // Show success message
+            const feedbackText = document.createElement('div');
+            feedbackText.className = 'feedback-text';
+            feedbackText.style.cssText = 'margin-bottom: 10px; font-weight: 500; color: #28a745;';
+            feedbackText.textContent = '✅ Correct! Test the click-outside functionality.';
+            feedback.appendChild(feedbackText);
+            
+            // Show explanation
+            const explanationDiv = document.createElement('div');
+            explanationDiv.className = 'explanation-box';
+            explanationDiv.innerHTML = `
+                <div style="font-weight: 600; color: #1976d2; margin-bottom: 8px; display: flex; align-items: center;">
+                    <span style="margin-right: 8px;">💡</span>
+                    Click Outside Test
+                </div>
+                <div style="line-height: 1.5; color: #333;">
+                    This test demonstrates the click-outside-to-close functionality. 
+                    Try clicking outside this explanation box (in the gray area) to close the popup immediately.
+                    The countdown timer should show 10 seconds, but you can close it early by clicking outside.
+                </div>
+            `;
+            
+            feedback.appendChild(explanationDiv);
+            
+            // Start countdown
+            startCountdown();
+            
+            // Add debugging info
+            console.log('🎓 Test: Click outside functionality enabled');
+            console.log('🎓 Test: Try clicking outside the explanation box to close immediately');
+        }
+        
+        function startCountdown() {
+            let timeLeft = 10;
+            const feedback = document.getElementById('feedback');
+            
+            // Create countdown display
+            const countdownDiv = document.createElement('div');
+            countdownDiv.id = 'countdown-timer';
+            countdownDiv.className = 'countdown-timer';
+            
+            feedback.appendChild(countdownDiv);
+            
+            const updateCountdown = () => {
+                if (timeLeft > 0) {
+                    countdownDiv.textContent = `Popup will close in ${timeLeft} seconds... (Click outside to close immediately)`;
+                    timeLeft--;
+                    setTimeout(updateCountdown, 1000);
+                } else {
+                    countdownDiv.textContent = 'Popup closed!';
+                    setTimeout(() => {
+                        feedback.innerHTML = '<div style="color: #28a745;">✅ Test completed successfully!</div>';
+                    }, 1000);
+                }
+            };
+            
+            updateCountdown();
+        }
+    </script>
+</body>
+</html> 
