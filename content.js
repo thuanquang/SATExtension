@@ -181,6 +181,16 @@ class SATQuizBlocker {
 
   async showQuiz() {
     try {
+      console.log('🎓 SAT Quiz Blocker: Starting showQuiz...');
+      console.log('🎓 SAT Quiz Blocker: Supabase client available?', !!this.supabaseClient);
+      
+      if (!this.supabaseClient) {
+        console.error('🎓 SAT Quiz Blocker: Supabase client is not available!');
+        this.showFeedback('Error: Database connection not available. Please refresh the page.', 'error');
+        setTimeout(() => this.unblockWebsite(), 3000);
+        return;
+      }
+
       console.log('🎓 SAT Quiz Blocker: Fetching question from Supabase...');
       // Get random question from Supabase (already validated)
       this.currentQuestion = await this.supabaseClient.getRandomQuestion();
@@ -189,7 +199,16 @@ class SATQuizBlocker {
       
       if (!this.currentQuestion) {
         console.error('🎓 SAT Quiz Blocker: No valid questions available after multiple attempts.');
-        this.unblockWebsite();
+        this.showFeedback('No questions available. Please try again later.', 'error');
+        setTimeout(() => this.unblockWebsite(), 3000);
+        return;
+      }
+
+      // Validate question has required fields
+      if (!this.currentQuestion.question_text) {
+        console.error('🎓 SAT Quiz Blocker: Question missing text:', this.currentQuestion);
+        this.showFeedback('Error: Invalid question data. Please refresh the page.', 'error');
+        setTimeout(() => this.unblockWebsite(), 3000);
         return;
       }
 
@@ -199,9 +218,17 @@ class SATQuizBlocker {
       this.showModal();
       
     } catch (error) {
-      console.error('🎓 SAT Quiz Blocker: Error showing quiz:', error);
-      this.unblockWebsite();
-      throw error; // Re-throw to be caught by forceQuiz
+      console.error('🎓 SAT Quiz Blocker: Error in showQuiz:', error);
+      console.error('🎓 SAT Quiz Blocker: Error stack:', error.stack);
+      
+      // Show error message to user
+      this.showFeedback(`Error loading quiz: ${error.message}. Please refresh the page.`, 'error');
+      
+      // Wait a bit before unblocking so user can see the error
+      setTimeout(() => {
+        console.log('🎓 SAT Quiz Blocker: Unblocking due to error in showQuiz');
+        this.unblockWebsite();
+      }, 3000);
     }
   }
 
@@ -302,17 +329,18 @@ class SATQuizBlocker {
     let questionContent = '';
     
     if (question.question_type === 'multiple_choice') {
-      // The answer_choices are already validated and filtered by supabase-client.js
-      const options = question.answer_choices;
-      
+      // Defensive: ensure options is a valid array
+      let options = Array.isArray(question.answer_choices) ? question.answer_choices : [];
+      options = options.map(opt => (typeof opt === 'string' ? opt : ''));
+    
       console.log('🎓 SAT Quiz Blocker: Rendering options:', options);
-      
+    
       questionContent = `
         <div class="quiz-options">
           ${options.map((option, index) => `
             <label class="option-label" style="display: block; margin: 10px 0; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
               <input type="radio" name="answer" value="${String.fromCharCode(65 + index)}" style="margin-right: 10px;">
-              <span style="font-weight: 500;">${String.fromCharCode(65 + index)}.</span> ${option}
+              <span style="font-weight: 500;">${String.fromCharCode(65 + index)}.</span> ${option || '<span style=\"color:#dc3545\">[Blank Option]</span>'}
             </label>
           `).join('')}
         </div>
@@ -476,7 +504,7 @@ class SATQuizBlocker {
   }
 
   handleMaxAttempts() {
-    this.isReviewing = true; // Enter review mode
+    // Do NOT enter review mode to prevent clicking outside to close
     this.showFeedback('❌ You have reached the maximum number of attempts.', 'error');
     this.showExplanation(true); // Show explanation and reveal correct answer
 
@@ -485,10 +513,11 @@ class SATQuizBlocker {
     
     // Start a "cooldown" period before unblocking
     const cooldownTime = EXTENSION_CONFIG.cooldownPeriod || 15000;
-    this.startCooldownTimer(cooldownTime, () => this.unblockWebsite());
+    const message = `Unlocking in ${Math.ceil(cooldownTime / 1000)} seconds...`;
+    this.startCooldownTimer(cooldownTime, () => this.unblockWebsite(), message);
   }
   
-  startCooldownTimer(duration, callback) {
+  startCooldownTimer(duration, callback, customMessage) {
     let timeLeft = Math.ceil(duration / 1000);
     const timerDisplay = document.createElement('div');
     timerDisplay.id = 'cooldown-timer';
@@ -497,7 +526,10 @@ class SATQuizBlocker {
 
     const updateTimer = () => {
       if (timeLeft > 0) {
-        timerDisplay.textContent = `You can continue in ${timeLeft}s. (Or click outside to close)`;
+        const message = customMessage 
+          ? customMessage.replace('${timeLeft}', timeLeft)
+          : `You can continue in ${timeLeft}s. (Or click outside to close)`;
+        timerDisplay.textContent = message;
         timeLeft--;
         setTimeout(updateTimer, 1000);
       } else {
@@ -581,29 +613,60 @@ class SATQuizBlocker {
   }
 
   showFeedback(message, type) {
+    console.log(`🎓 SAT Quiz Blocker: Showing feedback - ${type}: ${message}`);
+    
+    // Try to show feedback in the modal first
     const feedback = document.getElementById('feedback');
     if (feedback) {
-      // Find the feedback text element or create one
-      let feedbackText = feedback.querySelector('.feedback-text');
-      if (!feedbackText) {
-        feedbackText = document.createElement('div');
-        feedbackText.className = 'feedback-text';
-        feedbackText.style.cssText = `
-          margin-bottom: 10px;
-          font-weight: 500;
-        `;
-        feedback.insertBefore(feedbackText, feedback.firstChild);
+      feedback.textContent = message;
+      feedback.className = type; // 'success' or 'error'
+      return;
+    }
+    
+    // If modal doesn't exist yet, show error on overlay
+    const overlay = document.getElementById('sat-quiz-overlay');
+    if (overlay && !this.modal) {
+      console.log('🎓 SAT Quiz Blocker: Modal not created yet, showing error on overlay');
+      
+      // Remove any existing error display
+      const existingError = overlay.querySelector('.overlay-error');
+      if (existingError) {
+        existingError.remove();
       }
       
-      feedbackText.textContent = message;
-      feedbackText.style.color = type === 'success' ? '#28a745' : '#dc3545';
+      // Create error display
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'overlay-error';
+      errorDiv.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: white;
+        padding: 30px;
+        border-radius: 12px;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        text-align: center;
+        max-width: 400px;
+        z-index: 1000001;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      `;
+      
+      const color = type === 'error' ? '#dc3545' : '#28a745';
+      errorDiv.innerHTML = `
+        <div style="font-size: 24px; margin-bottom: 15px;">⚠️</div>
+        <div style="color: ${color}; font-weight: 500; margin-bottom: 10px;">${type.toUpperCase()}</div>
+        <div style="color: #333; line-height: 1.5;">${message}</div>
+      `;
+      
+      overlay.appendChild(errorDiv);
     }
   }
 
   updateAttemptsDisplay() {
-    const attemptsDiv = document.getElementById('attempts');
-    if (attemptsDiv) {
-      attemptsDiv.textContent = `Attempts: ${this.attempts}/${EXTENSION_CONFIG.maxAttempts}`;
+    const attemptsDisplay = document.getElementById('attempts');
+    if (attemptsDisplay) {
+      attemptsDisplay.textContent = `Attempts: ${this.attempts}/${EXTENSION_CONFIG.maxAttempts}`;
     }
   }
 
@@ -667,8 +730,50 @@ class SATQuizBlocker {
 // Initialize the script
 try {
   console.log('🎓 SAT Quiz Blocker: Initializing content script...');
+  console.log('🎓 SAT Quiz Blocker: Checking if SupabaseClient is available...');
+  
+  if (typeof SupabaseClient === 'undefined') {
+    console.error('🎓 SAT Quiz Blocker: SupabaseClient class is not defined!');
+    throw new Error('SupabaseClient class not found. Check if supabase-client.js is loaded.');
+  }
+  
+  console.log('🎓 SAT Quiz Blocker: Creating Supabase client...');
   const supabaseClient = new SupabaseClient();
+  console.log('🎓 SAT Quiz Blocker: Supabase client created successfully');
+  
+  console.log('🎓 SAT Quiz Blocker: Creating quiz blocker instance...');
   const quizBlockerInstance = new SATQuizBlocker(supabaseClient);
+  console.log('🎓 SAT Quiz Blocker: Quiz blocker instance created successfully');
+  
 } catch (e) {
-  console.error('Error initializing SAT Quiz Blocker:', e);
+  console.error('🎓 SAT Quiz Blocker: Error initializing SAT Quiz Blocker:', e);
+  console.error('🎓 SAT Quiz Blocker: Error stack:', e.stack);
+  
+  // Show error on page if possible
+  const errorDiv = document.createElement('div');
+  errorDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #dc3545;
+    color: white;
+    padding: 15px;
+    border-radius: 8px;
+    z-index: 999999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    max-width: 300px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  `;
+  errorDiv.innerHTML = `
+    <div style="font-weight: bold; margin-bottom: 5px;">SAT Quiz Extension Error</div>
+    <div style="font-size: 12px;">${e.message}</div>
+  `;
+  document.body.appendChild(errorDiv);
+  
+  // Remove error after 10 seconds
+  setTimeout(() => {
+    if (errorDiv.parentNode) {
+      errorDiv.remove();
+    }
+  }, 10000);
 } 

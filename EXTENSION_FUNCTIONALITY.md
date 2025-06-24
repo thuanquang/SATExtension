@@ -53,4 +53,39 @@ Review Mode is activated when a quiz is completed, either by answering correctly
     - A cooldown timer starts (`startCooldownTimer`).
     - The duration is configurable via `explanationReviewTime` (for correct answers) or `cooldownPeriod` (for max attempts) in `config.js`.
     - The timer's text explicitly states that the user can click outside to close early.
-    - If the user does not close it manually, the website is unblocked automatically when the timer finishes. 
+    - If the user does not close it manually, the website is unblocked automatically when the timer finishes.
+
+## 5. Current Issue and Debugging
+
+### Problem Description
+The extension shows the grey overlay (background gets greyed up) but then disappears after a few seconds without showing the quiz modal. This suggests an error in the quiz loading process.
+
+### Debugging Approach
+1. **Enhanced Error Logging**: Added comprehensive error handling and logging to `showQuiz()` method to identify where the failure occurs.
+2. **Error Display**: Modified `showFeedback()` to display errors on the overlay when the modal hasn't been created yet.
+3. **Initialization Checks**: Added checks for SupabaseClient availability and proper initialization.
+4. **Debug Page**: Created `debug-extension.html` to test each component step by step.
+
+### Debug Steps
+1. Open `debug-extension.html` in a browser with the extension enabled
+2. Run each test section to identify the failing component:
+   - Extension Status Check
+   - Configuration Test
+   - Supabase Connection Test
+   - Question Fetching Test
+   - Force Quiz Test
+3. Check browser console for detailed error logs
+4. Use the console log capture in the debug page to see all extension-related logs
+
+### Potential Issues
+- Supabase client not properly initialized
+- Database connection failing
+- Question fetching returning null/empty data
+- Modal creation failing due to missing DOM elements
+- Script injection order issues in background.js
+
+### Recent Changes
+- Added error handling to `showQuiz()` method
+- Enhanced `showFeedback()` to work before modal creation
+- Added initialization checks for SupabaseClient
+- Created comprehensive debug page for troubleshooting 

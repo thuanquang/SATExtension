@@ -37,13 +37,11 @@ async function loadStats() {
 
 function setupEventListeners() {
   // Toggle switch
-  const toggleSwitch = document.getElementById('toggle-switch');
-  const statusIndicator = document.getElementById('status-indicator');
+  const toggleInput = document.getElementById('toggle-switch-input');
   
-  toggleSwitch.addEventListener('click', async () => {
+  toggleInput.addEventListener('change', async () => {
     try {
-      const response = await chrome.runtime.sendMessage({ action: 'toggleExtension' });
-      
+      const response = await chrome.runtime.sendMessage({ action: 'toggleExtension', enabled: toggleInput.checked });
       if (response && response.enabled !== undefined) {
         updateToggleState(response.enabled);
       }
@@ -113,17 +111,15 @@ function setupEventListeners() {
 }
 
 function updateToggleState(enabled) {
-  const toggleSwitch = document.getElementById('toggle-switch');
+  const toggleInput = document.getElementById('toggle-switch-input');
   const statusIndicator = document.getElementById('status-indicator');
   
+  toggleInput.checked = enabled;
+  
   if (enabled) {
-    toggleSwitch.classList.add('active');
-    statusIndicator.classList.remove('inactive');
-    statusIndicator.style.background = '#4CAF50';
+    statusIndicator.classList.add('active');
   } else {
-    toggleSwitch.classList.remove('active');
-    statusIndicator.classList.add('inactive');
-    statusIndicator.style.background = '#f44336';
+    statusIndicator.classList.remove('active');
   }
 }
 

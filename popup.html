@@ -4,217 +4,56 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SAT Quiz Blocker</title>
-  <style>
-    body {
-      width: 320px;
-      min-height: 400px;
-      margin: 0;
-      padding: 20px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-    }
-
-    .header {
-      text-align: center;
-      margin-bottom: 25px;
-    }
-
-    .header h1 {
-      margin: 0 0 5px 0;
-      font-size: 24px;
-      font-weight: 600;
-    }
-
-    .header p {
-      margin: 0;
-      font-size: 14px;
-      opacity: 0.9;
-    }
-
-    .stats-container {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 20px;
-      margin-bottom: 20px;
-      backdrop-filter: blur(10px);
-    }
-
-    .stat-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      padding: 8px 0;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .stat-item:last-child {
-      border-bottom: none;
-      margin-bottom: 0;
-    }
-
-    .stat-label {
-      font-size: 14px;
-      opacity: 0.9;
-    }
-
-    .stat-value {
-      font-size: 16px;
-      font-weight: 600;
-    }
-
-    .controls-container {
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 20px;
-      backdrop-filter: blur(10px);
-    }
-
-    .control-item {
-      margin-bottom: 15px;
-    }
-
-    .control-item:last-child {
-      margin-bottom: 0;
-    }
-
-    .toggle-container {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .toggle-label {
-      font-size: 14px;
-      font-weight: 500;
-    }
-
-    .toggle-switch {
-      position: relative;
-      width: 50px;
-      height: 24px;
-      background: rgba(255, 255, 255, 0.3);
-      border-radius: 12px;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-
-    .toggle-switch.active {
-      background: #4CAF50;
-    }
-
-    .toggle-switch::after {
-      content: '';
-      position: absolute;
-      top: 2px;
-      left: 2px;
-      width: 20px;
-      height: 20px;
-      background: white;
-      border-radius: 50%;
-      transition: transform 0.3s;
-    }
-
-    .toggle-switch.active::after {
-      transform: translateX(26px);
-    }
-
-    .button {
-      width: 100%;
-      padding: 12px;
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      border-radius: 8px;
-      color: white;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-
-    .button:hover {
-      background: rgba(255, 255, 255, 0.3);
-      transform: translateY(-1px);
-    }
-
-    .button.danger {
-      background: rgba(244, 67, 54, 0.8);
-      border-color: rgba(244, 67, 54, 0.9);
-    }
-
-    .button.danger:hover {
-      background: rgba(244, 67, 54, 1);
-    }
-
-    .status-indicator {
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-right: 8px;
-      background: #4CAF50;
-    }
-
-    .status-indicator.inactive {
-      background: #f44336;
-    }
-
-    .footer {
-      text-align: center;
-      margin-top: 20px;
-      font-size: 12px;
-      opacity: 0.7;
-    }
-  </style>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
-  <div class="header">
-    <h1>🎓 SAT Quiz Blocker</h1>
+<body class="popup-body">
+
+  <div class="popup-header">
+    <h1><span class="logo">🎓</span> SAT Quiz Blocker</h1>
     <p>Stay focused, learn while browsing</p>
   </div>
 
-  <div class="stats-container">
-    <h3 style="margin: 0 0 15px 0; font-size: 16px;">Your Progress</h3>
-    
+  <div class="popup-card">
+    <h3 class="popup-card-title">Your Progress</h3>
     <div class="stat-item">
       <span class="stat-label">Questions Answered</span>
       <span class="stat-value" id="questions-answered">0</span>
     </div>
-    
     <div class="stat-item">
       <span class="stat-label">Total Attempts</span>
       <span class="stat-value" id="total-attempts">0</span>
     </div>
-    
     <div class="stat-item">
       <span class="stat-label">Last Quiz</span>
       <span class="stat-value" id="last-quiz">Never</span>
     </div>
   </div>
 
-  <div class="controls-container">
+  <div class="popup-card">
+    <h3 class="popup-card-title">Controls</h3>
     <div class="control-item">
-      <div class="toggle-container">
-        <span class="toggle-label">
-          <span class="status-indicator" id="status-indicator"></span>
-          Extension Status
-        </span>
-        <div class="toggle-switch" id="toggle-switch"></div>
-      </div>
+      <label for="toggle-switch" class="toggle-label">
+        <span class="status-indicator" id="status-indicator"></span>
+        Extension Status
+      </label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="toggle-switch-input">
+        <span class="slider"></span>
+      </label>
     </div>
-    
     <div class="control-item">
-      <button class="button" id="reset-stats">Reset Statistics</button>
+      <button class="popup-button" id="reset-stats">Reset Statistics</button>
     </div>
-    
     <div class="control-item">
-      <button class="button danger" id="force-quiz">Force Quiz Now</button>
+      <button class="popup-button danger" id="force-quiz">Force Quiz Now</button>
     </div>
   </div>
 
-  <div class="footer">
-    <p>Made by <a href="https://github.com/thuanquang" target="_blank">Thuan Quang</a></p>
+  <div class="popup-footer">
+    Made by Thuan Quang
   </div>
 
   <script src="popup.js"></script>
