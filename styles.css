@@ -104,6 +104,9 @@
   transition: all 0.2s ease-in-out;
   background: var(--qas-light-gray);
   position: relative;
+  color: var(--qas-dark-text);
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .option-label:hover {
@@ -119,22 +122,65 @@
   transform: scale(1.2);
 }
 
-.option-label input[type="radio"]:checked + span {
-  color: var(--qas-purple);
-  font-weight: 700;
-}
-
-/* Add custom styling for the checked option */
-.option-label input[type="radio"]:checked ~ .option-letter {
-    background-color: var(--qas-purple);
-    color: white;
-    border-color: var(--qas-purple);
-}
-
-/* Style the parent label when the radio is checked */
+/* Enhanced styling for selected options - much more readable */
 .option-label input[type="radio"]:checked {
-    border-color: var(--qas-purple);
-    background-color: #f3e5f5; /* Light purple */
+  margin-right: 14px;
+}
+
+/* Style the entire label when radio is checked for maximum readability */
+.option-label:has(input[type="radio"]:checked) {
+  background: linear-gradient(135deg, #007BFF 0%, #0056b3 100%);
+  border-color: #0056b3;
+  color: white;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 123, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Fallback for browsers that don't support :has() selector */
+.option-label input[type="radio"]:checked + span {
+  color: white;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Apply styling to the parent label when radio is checked (fallback method) */
+.option-label.selected {
+  background: linear-gradient(135deg, #007BFF 0%, #0056b3 100%);
+  border-color: #0056b3;
+  color: white;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 123, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+.option-label.selected span {
+  color: white;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+/* Ensure radio buttons remain visible and accessible in selected state */
+.option-label.selected input[type="radio"] {
+  accent-color: white;
+  filter: brightness(1.2);
+}
+
+/* Make sure all text within selected options is highly readable */
+.option-label.selected * {
+  color: white !important;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Improve readability on hover for non-selected options */
+.option-label:not(.selected):hover {
+  background: #e9f2ff;
+  border-color: var(--qas-blue);
+  color: #003d82;
+  font-weight: 500;
 }
 
 /* Quiz footer */
@@ -181,28 +227,34 @@
   min-height: 24px;
   padding: 12px;
   border-radius: 8px;
-  display: none; /* Hidden by default, shown via class */
+  display: block; /* Always visible, styling changes based on content */
+  transition: all 0.3s ease-in-out;
+}
+
+/* Empty feedback state */
+#feedback:empty {
+  display: none;
 }
 
 #feedback.success {
   color: var(--qas-success);
   background-color: #e9f7ef;
   border: 1px solid var(--qas-success);
-  display: block;
+  display: block !important;
 }
 
 #feedback.error {
   color: var(--qas-error);
   background-color: #fdecea;
   border: 1px solid var(--qas-error);
-  display: block;
+  display: block !important;
 }
 
 #feedback.loading {
   color: #007bff;
   background-color: #e3f2fd;
   border: 1px solid #007bff;
-  display: block;
+  display: block !important;
   position: relative;
 }
 
@@ -218,6 +270,57 @@
   border-top: 2px solid transparent;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+}
+
+/* Overlay feedback messages */
+.overlay-feedback {
+  animation: slideInFadeIn 0.3s ease-out;
+}
+
+@keyframes slideInFadeIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -60%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Ensure feedback is always readable */
+#feedback {
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+/* Add some visual feedback for state changes */
+#feedback.success {
+  animation: fadeInSuccess 0.3s ease-in-out;
+}
+
+#feedback.error {
+  animation: fadeInError 0.3s ease-in-out;
+}
+
+#feedback.loading {
+  animation: fadeInLoading 0.3s ease-in-out;
+}
+
+@keyframes fadeInSuccess {
+  from { opacity: 0; background-color: transparent; }
+  to { opacity: 1; background-color: #e9f7ef; }
+}
+
+@keyframes fadeInError {
+  from { opacity: 0; background-color: transparent; }
+  to { opacity: 1; background-color: #fdecea; }
+}
+
+@keyframes fadeInLoading {
+  from { opacity: 0; background-color: transparent; }
+  to { opacity: 1; background-color: #e3f2fd; }
 }
 
 /* Attempts counter */

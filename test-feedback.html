@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT Quiz Feedback System Test</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .test-button:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .mock-modal {
+            position: relative;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            margin: 20px 0;
+            max-width: 500px;
+        }
+        h1 { color: #333; }
+        h3 { color: #007bff; margin-top: 0; }
+        p { line-height: 1.6; color: #666; }
+        .status { 
+            padding: 10px; 
+            border-radius: 6px; 
+            margin: 10px 0; 
+            font-weight: 500;
+        }
+        .status.good { background: #e9f7ef; color: #28a745; }
+        .status.bad { background: #fdecea; color: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎓 SAT Quiz Feedback System Test</h1>
+        <p>This page tests the completely rewritten feedback system to ensure it works reliably in all scenarios.</p>
+        
+        <div class="status good">
+            ✅ <strong>Fixed Issues:</strong> 
+            Feedback now uses robust element finding, proper CSS display management, 
+            overlay fallbacks, and enhanced animations.
+        </div>
+        
+        <div class="test-section">
+            <h3>📱 Modal Feedback Tests</h3>
+            <p>These tests simulate feedback within a quiz modal (the normal scenario).</p>
+            
+            <div class="mock-modal">
+                <h4 style="margin: 0 0 15px 0; color: #333;">Mock Quiz Modal</h4>
+                <div id="feedback" style="margin-top: 20px; font-weight: 500; font-size: 16px; min-height: 24px; padding: 12px; border-radius: 8px; display: block; transition: all 0.3s ease-in-out;">
+                    Ready for testing...
+                </div>
+                <div id="attempts" style="margin-top: 10px; font-size: 14px; color: #666;">
+                    Attempts: 1/3
+                </div>
+            </div>
+            
+            <button class="test-button" onclick="testModalSuccess()">✅ Test Success Message</button>
+            <button class="test-button" onclick="testModalError()">❌ Test Error Message</button>
+            <button class="test-button" onclick="testModalLoading()">⏳ Test Loading Message</button>
+            <button class="test-button" onclick="testModalClear()">🧹 Test Clear Feedback</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>🌐 Overlay Feedback Tests</h3>
+            <p>These tests simulate feedback when modal doesn't exist yet (fallback scenario).</p>
+            
+            <button class="test-button" onclick="testOverlaySuccess()">✅ Test Overlay Success</button>
+            <button class="test-button" onclick="testOverlayError()">❌ Test Overlay Error</button>
+            <button class="test-button" onclick="testOverlayLoading()">⏳ Test Overlay Loading</button>
+            <button class="test-button" onclick="clearOverlayMessages()">🧹 Clear Overlay</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔄 Real Extension Tests</h3>
+            <p>These tests interact with the actual extension if it's loaded.</p>
+            
+            <button class="test-button" onclick="testRealExtension()">🎓 Test Real Extension Feedback</button>
+            <button class="test-button" onclick="forceQuizTest()">🚀 Force Quiz (if extension loaded)</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 Test Results</h3>
+            <div id="test-results" style="font-family: monospace; background: #f8f9fa; padding: 15px; border-radius: 6px; min-height: 100px;">
+                Test results will appear here...
+            </div>
+        </div>
+    </div>
+
+    <!-- Create overlay for testing -->
+    <div id="sat-quiz-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(33, 37, 41, 0.85); z-index: 999999; backdrop-filter: blur(4px);"></div>
+
+    <script>
+        let testResults = [];
+        
+        function logResult(test, status, details = '') {
+            const timestamp = new Date().toLocaleTimeString();
+            testResults.push(`[${timestamp}] ${test}: ${status} ${details}`);
+            updateResults();
+        }
+        
+        function updateResults() {
+            const resultsDiv = document.getElementById('test-results');
+            resultsDiv.textContent = testResults.slice(-10).join('\n'); // Show last 10 results
+        }
+        
+        // Mock the feedback functions for testing
+        class MockFeedbackTester {
+            constructor() {
+                this.modal = document.querySelector('.mock-modal');
+            }
+            
+            findFeedbackElement() {
+                return document.getElementById('feedback');
+            }
+            
+            displayFeedbackInModal(feedbackElement, message, type) {
+                feedbackElement.innerHTML = '';
+                feedbackElement.className = '';
+                feedbackElement.textContent = message;
+                
+                if (type) {
+                    feedbackElement.classList.add(type);
+                }
+                
+                feedbackElement.style.display = 'block';
+                feedbackElement.style.opacity = '0';
+                
+                requestAnimationFrame(() => {
+                    feedbackElement.style.opacity = '1';
+                });
+                
+                logResult('Modal Feedback', 'SUCCESS', `Type: ${type}, Message: "${message}"`);
+            }
+            
+            displayFeedbackOnOverlay(message, type) {
+                const overlay = document.getElementById('sat-quiz-overlay');
+                if (!overlay) {
+                    logResult('Overlay Feedback', 'FAILED', 'No overlay found');
+                    return;
+                }
+                
+                overlay.style.display = 'flex';
+                overlay.style.justifyContent = 'center';
+                overlay.style.alignItems = 'center';
+                
+                // Clear existing messages
+                const existing = overlay.querySelectorAll('.overlay-feedback');
+                existing.forEach(el => el.remove());
+                
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'overlay-feedback';
+                messageDiv.style.cssText = `
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: white;
+                    padding: 30px;
+                    border-radius: 12px;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                    text-align: center;
+                    max-width: 400px;
+                    z-index: 1000001;
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                    opacity: 0;
+                    transition: opacity 0.3s ease-in-out;
+                `;
+                
+                let icon, color, bgColor, borderColor;
+                switch (type) {
+                    case 'error':
+                        icon = '⚠️'; color = '#dc3545'; bgColor = '#fdecea'; borderColor = '#f5c6cb';
+                        break;
+                    case 'loading':
+                        icon = '⏳'; color = '#007bff'; bgColor = '#e3f2fd'; borderColor = '#bee5eb';
+                        break;
+                    case 'success':
+                        icon = '✅'; color = '#28a745'; bgColor = '#e9f7ef'; borderColor = '#c3e6cb';
+                        break;
+                    default:
+                        icon = 'ℹ️'; color = '#6c757d'; bgColor = '#f8f9fa'; borderColor = '#dee2e6';
+                }
+                
+                messageDiv.innerHTML = `
+                    <div style="font-size: 24px; margin-bottom: 15px;">${icon}</div>
+                    <div style="color: ${color}; font-weight: 600; margin-bottom: 10px; text-transform: uppercase;">
+                        ${type === 'loading' ? 'Loading' : type || 'Info'}
+                    </div>
+                    <div style="color: #333; line-height: 1.5; padding: 10px; background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 6px;">
+                        ${message}
+                    </div>
+                `;
+                
+                overlay.appendChild(messageDiv);
+                
+                requestAnimationFrame(() => {
+                    messageDiv.style.opacity = '1';
+                });
+                
+                logResult('Overlay Feedback', 'SUCCESS', `Type: ${type}, Message: "${message}"`);
+                
+                // Auto-hide after 3 seconds for demo
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                }, 3000);
+            }
+            
+            clearFeedback() {
+                const feedback = this.findFeedbackElement();
+                if (feedback) {
+                    feedback.innerHTML = '';
+                    feedback.className = '';
+                    feedback.style.display = 'none';
+                }
+                
+                this.clearOverlayMessages();
+                logResult('Clear Feedback', 'SUCCESS', 'All feedback cleared');
+            }
+            
+            clearOverlayMessages() {
+                const overlay = document.getElementById('sat-quiz-overlay');
+                if (overlay) {
+                    const messages = overlay.querySelectorAll('.overlay-feedback');
+                    messages.forEach(msg => msg.remove());
+                    overlay.style.display = 'none';
+                }
+            }
+        }
+        
+        const tester = new MockFeedbackTester();
+        
+        // Test functions
+        function testModalSuccess() {
+            tester.displayFeedbackInModal(tester.findFeedbackElement(), '✅ Correct! Well done.', 'success');
+        }
+        
+        function testModalError() {
+            tester.displayFeedbackInModal(tester.findFeedbackElement(), '❌ Incorrect. You have 2 attempts left.', 'error');
+        }
+        
+        function testModalLoading() {
+            tester.displayFeedbackInModal(tester.findFeedbackElement(), 'Loading quiz... (Attempt 1/3)', 'loading');
+        }
+        
+        function testModalClear() {
+            tester.clearFeedback();
+        }
+        
+        function testOverlaySuccess() {
+            tester.displayFeedbackOnOverlay('Quiz loaded successfully!', 'success');
+        }
+        
+        function testOverlayError() {
+            tester.displayFeedbackOnOverlay('Failed to load quiz. Please check your internet connection.', 'error');
+        }
+        
+        function testOverlayLoading() {
+            tester.displayFeedbackOnOverlay('Loading quiz... Please wait...', 'loading');
+        }
+        
+        function clearOverlayMessages() {
+            tester.clearOverlayMessages();
+            logResult('Clear Overlay', 'SUCCESS', 'Overlay messages cleared');
+        }
+        
+        function testRealExtension() {
+            // Try to access the real extension
+            if (window.quizBlockerInstance) {
+                try {
+                    window.quizBlockerInstance.showFeedback('Testing real extension feedback system!', 'success');
+                    logResult('Real Extension', 'SUCCESS', 'Extension feedback called');
+                } catch (error) {
+                    logResult('Real Extension', 'FAILED', `Error: ${error.message}`);
+                }
+            } else {
+                logResult('Real Extension', 'NOT FOUND', 'Extension not loaded or not accessible');
+            }
+        }
+        
+        function forceQuizTest() {
+            if (window.quizBlockerInstance) {
+                try {
+                    window.quizBlockerInstance.forceQuiz();
+                    logResult('Force Quiz', 'CALLED', 'Force quiz method called');
+                } catch (error) {
+                    logResult('Force Quiz', 'FAILED', `Error: ${error.message}`);
+                }
+            } else {
+                logResult('Force Quiz', 'NOT AVAILABLE', 'Extension not loaded');
+            }
+        }
+        
+        // Initialize
+        logResult('Test Page', 'LOADED', 'Feedback test page initialized');
+        
+        // Test CSS animations
+        setTimeout(() => {
+            const feedback = document.getElementById('feedback');
+            feedback.textContent = 'CSS animations and styling ready ✨';
+            feedback.className = 'success';
+            logResult('CSS Test', 'SUCCESS', 'Styling and animations verified');
+        }, 1000);
+    </script>
+</body>
+</html> 

@@ -258,7 +258,7 @@ class SATQuizBlocker {
       }
 
       // Clear loading message
-      this.showFeedback('', '');
+      this.clearFeedback();
       
       // No need for further validation here, as it's done in the client
       console.log('🎓 SAT Quiz Blocker: Creating modal for validated question...');
@@ -343,6 +343,17 @@ class SATQuizBlocker {
         input.addEventListener('change', () => {
           submitBtn.disabled = false;
           submitBtn.style.opacity = '1';
+          
+          // Remove 'selected' class from all option labels
+          modal.querySelectorAll('.option-label').forEach(label => {
+            label.classList.remove('selected');
+          });
+          
+          // Add 'selected' class to the parent label of the checked radio
+          const parentLabel = input.closest('.option-label');
+          if (parentLabel) {
+            parentLabel.classList.add('selected');
+          }
         });
       });
     } else if (this.currentQuestion.question_type === 'numeric') {
@@ -700,84 +711,172 @@ class SATQuizBlocker {
     }
   }
 
-  showFeedback(message, type) {
+  showFeedback(message, type = '') {
     console.log(`🎓 SAT Quiz Blocker: Showing feedback - ${type}: ${message}`);
     
-    // If message is empty, clear feedback
-    if (!message) {
-      const feedback = document.getElementById('feedback');
-      if (feedback) {
-        feedback.textContent = '';
-        feedback.className = '';
-      }
-      
-      // Also clear overlay error if exists
-      const overlay = document.getElementById('sat-quiz-overlay');
-      if (overlay) {
-        const existingError = overlay.querySelector('.overlay-error');
-        if (existingError) {
-          existingError.remove();
-        }
-      }
+    // Clear any existing overlay messages first
+    this.clearOverlayMessages();
+    
+    // If message is empty or just whitespace, clear feedback
+    if (!message || !message.trim()) {
+      this.clearFeedback();
       return;
     }
     
     // Try to show feedback in the modal first
-    const feedback = document.getElementById('feedback');
+    const feedback = this.findFeedbackElement();
     if (feedback) {
-      feedback.textContent = message;
-      feedback.className = type; // 'success', 'error', or 'loading'
+      console.log('🎓 SAT Quiz Blocker: Showing feedback in modal');
+      this.displayFeedbackInModal(feedback, message, type);
       return;
     }
     
     // If modal doesn't exist yet, show message on overlay
-    const overlay = document.getElementById('sat-quiz-overlay');
-    if (overlay && !this.modal) {
-      console.log('🎓 SAT Quiz Blocker: Modal not created yet, showing message on overlay');
-      
-      // Remove any existing error display
-      const existingError = overlay.querySelector('.overlay-error');
-      if (existingError) {
-        existingError.remove();
+    console.log('🎓 SAT Quiz Blocker: Modal not available, showing feedback on overlay');
+    this.displayFeedbackOnOverlay(message, type);
+  }
+
+  findFeedbackElement() {
+    // Try multiple ways to find the feedback element
+    let feedback = null;
+    
+    // First, try within the modal if it exists
+    if (this.modal) {
+      feedback = this.modal.querySelector('#feedback');
+    }
+    
+    // If not found, try in the document
+    if (!feedback) {
+      feedback = document.getElementById('feedback');
+    }
+    
+    // If still not found, try to find it within any quiz modal
+    if (!feedback) {
+      const modal = document.getElementById('sat-quiz-modal');
+      if (modal) {
+        feedback = modal.querySelector('#feedback');
       }
-      
-      // Create message display
-      const messageDiv = document.createElement('div');
-      messageDiv.className = 'overlay-error';
-      messageDiv.style.cssText = `
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: white;
-        padding: 30px;
-        border-radius: 12px;
-        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
-        text-align: center;
-        max-width: 400px;
-        z-index: 1000001;
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      `;
-      
-      let icon, color;
-      if (type === 'error') {
+    }
+    
+    return feedback;
+  }
+
+  displayFeedbackInModal(feedbackElement, message, type) {
+    // Clear any existing content and classes
+    feedbackElement.innerHTML = '';
+    feedbackElement.className = '';
+    
+    // Set the message
+    feedbackElement.textContent = message;
+    
+    // Apply appropriate styling
+    if (type) {
+      feedbackElement.classList.add(type);
+    }
+    
+    // Ensure it's visible
+    feedbackElement.style.display = 'block';
+    
+    // Add fade-in effect
+    feedbackElement.style.opacity = '0';
+    requestAnimationFrame(() => {
+      feedbackElement.style.opacity = '1';
+    });
+  }
+
+  displayFeedbackOnOverlay(message, type) {
+    const overlay = document.getElementById('sat-quiz-overlay');
+    if (!overlay) {
+      console.warn('🎓 SAT Quiz Blocker: No overlay found for feedback display');
+      return;
+    }
+    
+    // Create message display
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'overlay-feedback';
+    messageDiv.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      max-width: 400px;
+      z-index: 1000001;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    `;
+    
+    let icon, color, bgColor, borderColor;
+    switch (type) {
+      case 'error':
         icon = '⚠️';
         color = '#dc3545';
-      } else if (type === 'loading') {
+        bgColor = '#fdecea';
+        borderColor = '#f5c6cb';
+        break;
+      case 'loading':
         icon = '⏳';
         color = '#007bff';
-      } else {
+        bgColor = '#e3f2fd';
+        borderColor = '#bee5eb';
+        break;
+      case 'success':
         icon = '✅';
         color = '#28a745';
-      }
-      
-      messageDiv.innerHTML = `
-        <div style="font-size: 24px; margin-bottom: 15px;">${icon}</div>
-        <div style="color: ${color}; font-weight: 500; margin-bottom: 10px;">${type === 'loading' ? 'LOADING' : type.toUpperCase()}</div>
-        <div style="color: #333; line-height: 1.5;">${message}</div>
-      `;
-      
-      overlay.appendChild(messageDiv);
+        bgColor = '#e9f7ef';
+        borderColor = '#c3e6cb';
+        break;
+      default:
+        icon = 'ℹ️';
+        color = '#6c757d';
+        bgColor = '#f8f9fa';
+        borderColor = '#dee2e6';
+    }
+    
+    messageDiv.innerHTML = `
+      <div style="font-size: 24px; margin-bottom: 15px;">${icon}</div>
+      <div style="color: ${color}; font-weight: 600; margin-bottom: 10px; text-transform: uppercase;">
+        ${type === 'loading' ? 'Loading' : type || 'Info'}
+      </div>
+      <div style="color: #333; line-height: 1.5; padding: 10px; background: ${bgColor}; border: 1px solid ${borderColor}; border-radius: 6px;">
+        ${message}
+      </div>
+    `;
+    
+    overlay.appendChild(messageDiv);
+    
+    // Fade in the message
+    requestAnimationFrame(() => {
+      messageDiv.style.opacity = '1';
+    });
+  }
+
+  clearFeedback() {
+    console.log('🎓 SAT Quiz Blocker: Clearing feedback');
+    
+    // Clear modal feedback
+    const feedback = this.findFeedbackElement();
+    if (feedback) {
+      feedback.innerHTML = '';
+      feedback.className = '';
+      feedback.style.display = 'none';
+    }
+    
+    // Clear overlay messages
+    this.clearOverlayMessages();
+  }
+
+  clearOverlayMessages() {
+    const overlay = document.getElementById('sat-quiz-overlay');
+    if (overlay) {
+      // Remove old overlay messages
+      const existingMessages = overlay.querySelectorAll('.overlay-feedback, .overlay-error');
+      existingMessages.forEach(msg => msg.remove());
     }
   }
 
