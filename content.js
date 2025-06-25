@@ -377,22 +377,62 @@ class SATQuizBlocker {
     let questionContent = '';
     
     if (question.question_type === 'multiple_choice') {
-      // Defensive: ensure options is a valid array
-      let options = Array.isArray(question.answer_choices) ? question.answer_choices : [];
-      options = options.map(opt => (typeof opt === 'string' ? opt : ''));
-    
-      console.log('🎓 SAT Quiz Blocker: Rendering options:', options);
-    
-      questionContent = `
-        <div class="quiz-options">
-          ${options.map((option, index) => `
-            <label class="option-label" style="display: block; margin: 10px 0; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
-              <input type="radio" name="answer" value="${String.fromCharCode(65 + index)}" style="margin-right: 10px;">
-              <span style="font-weight: 500;">${String.fromCharCode(65 + index)}.</span> ${option || '<span style=\"color:#dc3545\">[Blank Option]</span>'}
-            </label>
-          `).join('')}
-        </div>
-      `;
+      // Defensive: ensure options is a valid array and filter out invalid options
+      let options = [];
+      
+      if (Array.isArray(question.answer_choices)) {
+        options = question.answer_choices.filter(opt => {
+          // Filter out null, undefined, non-strings, and empty strings
+          return opt !== null && 
+                 opt !== undefined && 
+                 typeof opt === 'string' && 
+                 opt.trim() !== '';
+        });
+      }
+      
+      console.log('🎓 SAT Quiz Blocker: Raw answer_choices:', question.answer_choices);
+      console.log('🎓 SAT Quiz Blocker: Filtered options for rendering:', options);
+      
+      // Additional safety check - if we don't have enough valid options, show an error
+      if (options.length < 2) {
+        console.error('🎓 SAT Quiz Blocker: Not enough valid options for rendering. Options:', options);
+        questionContent = `
+          <div class="quiz-error" style="color: #dc3545; padding: 20px; text-align: center; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 8px;">
+            <h4>⚠️ Question Error</h4>
+            <p>This question has insufficient answer options.</p>
+            <p>Question ID: ${question.id}</p>
+            <p>Please report this issue to the administrator.</p>
+          </div>
+        `;
+      } else {
+        // Render valid options only
+        questionContent = `
+          <div class="quiz-options">
+            ${options.map((option, index) => {
+              // Double-check each option before rendering
+              const safeOption = (option && typeof option === 'string') ? option.trim() : '';
+              if (!safeOption) {
+                console.warn('🎓 SAT Quiz Blocker: Skipping empty option at index:', index);
+                return ''; // Skip empty options
+              }
+              
+              return `
+                <label class="option-label" style="display: block; margin: 10px 0; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                  <input type="radio" name="answer" value="${String.fromCharCode(65 + index)}" style="margin-right: 10px;">
+                  <span style="font-weight: 500;">${String.fromCharCode(65 + index)}.</span> ${safeOption}
+                </label>
+              `;
+            }).filter(html => html !== '').join('')}
+          </div>
+        `;
+        
+        // Log warning if some options were filtered out
+        const renderedOptionsCount = options.filter(opt => opt && opt.trim()).length;
+        if (renderedOptionsCount !== question.answer_choices?.length) {
+          console.warn('🎓 SAT Quiz Blocker: Some options were filtered out during rendering');
+          console.warn('🎓 SAT Quiz Blocker: Original count:', question.answer_choices?.length, 'Rendered count:', renderedOptionsCount);
+        }
+      }
     } else if (question.question_type === 'numeric') {
       questionContent = `
         <div class="numeric-input" style="margin: 20px 0;">

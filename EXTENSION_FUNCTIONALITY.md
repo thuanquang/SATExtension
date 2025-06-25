@@ -141,4 +141,104 @@ The extension shows the grey overlay (background gets greyed up) but then disapp
 - **FIXED**: Added retry mechanism for question fetching
 - **FIXED**: Improved loading states and user feedback
 - **FIXED**: Added race condition prevention in force quiz
-- **FIXED**: Made error timeout configurable via `errorTimeout` setting 
+- **FIXED**: Made error timeout configurable via `errorTimeout` setting
+
+## 7. Blank Options Issue - Complete Fix
+
+### Problem Description
+Sometimes the quiz popup displays blank options instead of the actual answer choices. This is a critical issue that makes questions impossible to answer correctly.
+
+### Root Causes Identified
+1. **Database Issues**:
+   - NULL or missing `answer_choices` arrays
+   - Empty `answer_choices` arrays
+   - Individual choices that are NULL, undefined, or empty strings
+   - Whitespace-only choices
+   - Non-string data types in choices arrays
+
+2. **Data Processing Issues**:
+   - Insufficient validation during question formatting
+   - Incorrect filtering logic
+   - Missing safety checks in rendering
+
+3. **UI Rendering Issues**:
+   - Inadequate client-side validation
+   - Poor error handling for malformed data
+
+### Comprehensive Solution Implemented
+
+#### 1. Enhanced Database Validation (`supabase-client.js`)
+- **Strict Type Checking**: Validates `answer_choices` is a proper array
+- **Content Filtering**: Removes NULL, undefined, empty, and whitespace-only choices
+- **Minimum Requirements**: Ensures at least 2 valid choices exist
+- **Correct Answer Validation**: Verifies correct answer index is valid
+- **Detailed Logging**: Comprehensive logging for debugging
+
+#### 2. Robust UI Rendering (`content.js`)
+- **Multi-layer Validation**: Additional checks before rendering
+- **Error Display**: Shows user-friendly error for problematic questions
+- **Safe Rendering**: Filters out invalid options during HTML generation
+- **Graceful Degradation**: Handles edge cases without crashing
+
+#### 3. Database Diagnostic and Fix Tools
+- **`debug-blank-options.html`**: Comprehensive diagnostic tool
+- **`fix-blank-options.sql`**: SQL queries to identify and fix database issues
+- **Automated Analysis**: Detects all types of blank option problems
+
+#### 4. Enhanced Error Handling
+- **Validation Cascade**: Multiple validation layers from database to UI
+- **User-Friendly Errors**: Clear error messages for problematic questions
+- **Admin Notifications**: Detailed logging for troubleshooting
+- **Graceful Fallbacks**: System continues to work even with some bad data
+
+### Tools for Diagnosis and Repair
+
+#### Diagnostic Tool (`debug-blank-options.html`)
+1. Open the file in your browser with the extension enabled
+2. It will automatically analyze your database
+3. Provides detailed report of all issues found
+4. Generates SQL commands to fix problems
+
+#### SQL Fix Script (`fix-blank-options.sql`)
+1. Run in your Supabase SQL editor
+2. Identifies all problematic questions
+3. Provides example fix commands
+4. Validates fixes were successful
+
+### Prevention Measures
+1. **Input Validation**: Validate data when adding questions
+2. **Regular Audits**: Periodically run diagnostic tools
+3. **Data Quality Checks**: Implement database constraints
+4. **User Feedback**: Monitor for blank option reports
+
+### Quick Fix Commands
+
+**Find all problematic questions:**
+```sql
+SELECT question_id, answer_choices 
+FROM questions 
+WHERE question_type = 'multiple_choice' 
+AND (answer_choices IS NULL OR answer_choices && ARRAY['', NULL]);
+```
+
+**Delete unfixable questions:**
+```sql
+DELETE FROM questions 
+WHERE question_type = 'multiple_choice' 
+AND answer_choices IS NULL;
+```
+
+**Example fix for a specific question:**
+```sql
+UPDATE questions 
+SET answer_choices = ARRAY['Option A', 'Option B', 'Option C', 'Option D']
+WHERE question_id = 'problematic-question-id';
+```
+
+### Monitoring and Maintenance
+- Run diagnostic tool monthly
+- Check console logs for validation warnings
+- Monitor user feedback for quiz display issues
+- Maintain data quality standards for new questions
+
+This comprehensive fix addresses all known causes of blank options and provides tools for ongoing maintenance and prevention. 

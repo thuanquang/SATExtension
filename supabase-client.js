@@ -243,23 +243,61 @@ class SupabaseClient {
     
     if (question.question_type === 'multiple_choice') {
       // For multiple choice questions, convert to the expected format
-      const choices = (question.answer_choices || []).filter(c => c && String(c).trim());
-
-      // Validate that there are enough valid choices
-      if (choices.length < 2) { // Assuming at least 2 options are required
-        console.error('🎓 Supabase Client: Not enough valid answer choices for question:', question.question_id);
+      console.log('🎓 Supabase Client: Raw answer_choices:', question.answer_choices);
+      
+      // First check if answer_choices exists and is valid
+      if (!question.answer_choices || !Array.isArray(question.answer_choices)) {
+        console.error('🎓 Supabase Client: Invalid or missing answer_choices for question:', question.question_id);
         return null;
+      }
+
+      // Filter out null, undefined, empty strings, and whitespace-only strings
+      const rawChoices = question.answer_choices || [];
+      const filteredChoices = rawChoices.filter(choice => {
+        if (choice === null || choice === undefined) {
+          console.warn('🎓 Supabase Client: Found null/undefined choice in question:', question.question_id);
+          return false;
+        }
+        if (typeof choice !== 'string') {
+          console.warn('🎓 Supabase Client: Found non-string choice in question:', question.question_id, 'choice:', choice);
+          return false;
+        }
+        if (choice.trim() === '') {
+          console.warn('🎓 Supabase Client: Found empty/whitespace choice in question:', question.question_id);
+          return false;
+        }
+        return true;
+      });
+
+      console.log('🎓 Supabase Client: Filtered choices:', filteredChoices);
+
+      // Validate that there are enough valid choices (at least 2, ideally 4)
+      if (filteredChoices.length < 2) {
+        console.error('🎓 Supabase Client: Not enough valid answer choices for question:', question.question_id, 'valid choices:', filteredChoices.length);
+        return null;
+      }
+
+      // Warn if less than 4 options (which is typical for SAT questions)
+      if (filteredChoices.length < 4) {
+        console.warn('🎓 Supabase Client: Question has fewer than 4 options:', question.question_id, 'options:', filteredChoices.length);
       }
       
       const correctIndex = parseInt(question.correct_answer) - 1; // Convert from 1-based to 0-based
       
       // Validate correct answer index
-      if (isNaN(correctIndex) || correctIndex < 0 || correctIndex >= choices.length) {
+      if (isNaN(correctIndex) || correctIndex < 0 || correctIndex >= filteredChoices.length) {
         console.error('🎓 Supabase Client: Invalid correct_answer index for question:', question.question_id);
-        console.error('🎓 Supabase Client: correct_answer:', question.correct_answer, 'choices length:', choices.length);
+        console.error('🎓 Supabase Client: correct_answer:', question.correct_answer, 'filtered choices length:', filteredChoices.length);
+        console.error('🎓 Supabase Client: choices:', filteredChoices);
         return null;
       }
       
+      // Ensure we have exactly 4 options for consistent UI (pad with empty strings if needed)
+      const normalizedChoices = [...filteredChoices];
+      while (normalizedChoices.length < 4) {
+        normalizedChoices.push(''); // This is acceptable as we've validated we have at least 2 valid choices
+      }
+
       const formattedQuestion = {
         id: question.question_id,
         question_text: question.question_text,
@@ -268,12 +306,12 @@ class SupabaseClient {
         difficulty: question.difficulty,
         tag: question.tag,
         question_type: question.question_type,
-        option_a: choices[0] || '',
-        option_b: choices[1] || '',
-        option_c: choices[2] || '',
-        option_d: choices[3] || '',
+        option_a: normalizedChoices[0] || '',
+        option_b: normalizedChoices[1] || '',
+        option_c: normalizedChoices[2] || '',
+        option_d: normalizedChoices[3] || '',
         correct_answer: String.fromCharCode(65 + correctIndex), // Convert to A, B, C, D
-        answer_choices: choices
+        answer_choices: filteredChoices // Use filtered choices, not normalized (to avoid empty strings in the array)
       };
       
       console.log('🎓 Supabase Client: Formatted multiple choice question:', formattedQuestion);
