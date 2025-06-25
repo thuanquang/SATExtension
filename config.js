@@ -12,7 +12,8 @@ const EXTENSION_CONFIG = {
   questionsPerSession: 1, // Number of questions to answer per session
   preferredDifficulty: 'medium', // Preferred difficulty level: 'easy', 'medium', 'hard'
   preferredTags: ['Algebra', 'Geometry', 'Grammar', 'Vocabulary'], // Preferred question tags
-  explanationReviewTime: 10 * 1000 // Time in milliseconds for reviewing explanation (10 seconds)
+  explanationReviewTime: 10 * 1000, // Time in milliseconds for reviewing explanation (10 seconds)
+  errorTimeout: 15 * 1000 // Time in milliseconds before auto-unblocking on errors (15 seconds)
 };
 
 // Export for use in other files

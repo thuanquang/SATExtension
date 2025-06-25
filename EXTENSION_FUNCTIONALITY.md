@@ -55,7 +55,55 @@ Review Mode is activated when a quiz is completed, either by answering correctly
     - The timer's text explicitly states that the user can click outside to close early.
     - If the user does not close it manually, the website is unblocked automatically when the timer finishes.
 
-## 5. Current Issue and Debugging
+## 5. Error Handling and Recovery
+
+### Recent Fixes (Latest Update)
+
+**Issue**: Quiz automatically and prematurely exiting after 3 seconds when forcing new quiz or during other scenarios.
+
+**Root Cause**: Aggressive 3-second timeouts in the `showQuiz()` method that automatically unblocked the website on any error condition.
+
+**Solution Implemented**:
+
+1. **Extended Timeout Duration**: 
+   - Changed from 3 seconds to 15 seconds (configurable via `errorTimeout` in `config.js`)
+   - Gives more time for network recovery and user understanding
+
+2. **Retry Mechanism**:
+   - Added 3-attempt retry logic for question fetching
+   - 2-second delays between retries for normal failures
+   - 3-second delays for network errors
+   - Progressive feedback showing retry attempts
+
+3. **Enhanced Loading States**:
+   - Added loading feedback during question fetching
+   - Clear visual indicators for different states (loading, error, success)
+   - Better user communication about what's happening
+
+4. **Improved Error Handling**:
+   - More descriptive error messages
+   - Graceful handling of network issues
+   - Better feedback for different error types
+
+5. **Race Condition Prevention**:
+   - Added small delay in `forceQuiz()` to ensure proper overlay creation
+   - Better initialization checks
+   - Improved error recovery in force quiz scenarios
+
+### Error Timeout Configuration
+
+- **`errorTimeout`**: New configurable setting in `config.js` (default: 15 seconds)
+- Controls how long to wait before auto-unblocking on errors
+- Can be adjusted based on network conditions and user preferences
+
+### Loading and Feedback System
+
+- **Loading State**: Shows "Loading quiz..." with attempt counter during retries
+- **Error State**: Shows specific error messages with recovery suggestions
+- **Success State**: Clears feedback when quiz loads successfully
+- **Overlay Feedback**: Shows messages on overlay when modal isn't created yet
+
+## 6. Current Issue and Debugging
 
 ### Problem Description
 The extension shows the grey overlay (background gets greyed up) but then disappears after a few seconds without showing the quiz modal. This suggests an error in the quiz loading process.
@@ -88,4 +136,9 @@ The extension shows the grey overlay (background gets greyed up) but then disapp
 - Added error handling to `showQuiz()` method
 - Enhanced `showFeedback()` to work before modal creation
 - Added initialization checks for SupabaseClient
-- Created comprehensive debug page for troubleshooting 
+- Created comprehensive debug page for troubleshooting
+- **FIXED**: Extended error timeouts from 3 to 15 seconds
+- **FIXED**: Added retry mechanism for question fetching
+- **FIXED**: Improved loading states and user feedback
+- **FIXED**: Added race condition prevention in force quiz
+- **FIXED**: Made error timeout configurable via `errorTimeout` setting 
