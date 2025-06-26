@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "SAT Quiz Blocker",
-  "version": "1.0.1",
-  "description": "Blocks websites until users answer SAT questions correctly",
+  "version": "2.0.0",
+  "description": "Blocks websites until users answer SAT questions correctly - Refactored",
   "permissions": [
     "storage",
     "scripting",
@@ -19,6 +19,23 @@
     "default_popup": "popup.html",
     "default_title": "SAT Quiz Blocker"
   },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "config.js",
+        "supabase-client.js",
+        "components/QuizState.js",
+        "components/FeedbackManager.js",
+        "components/QuizModal.js",
+        "components/BlockManager.js",
+        "QuizController.js",
+        "content-refactored.js"
+      ],
+      "css": ["styles.css"],
+      "run_at": "document_end"
+    }
+  ],
   "web_accessible_resources": [
     {
       "resources": [
