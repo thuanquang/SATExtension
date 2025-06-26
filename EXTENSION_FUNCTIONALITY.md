@@ -400,3 +400,95 @@ Created `test-feedback.html` with comprehensive test suite covering:
 - CSS animation verification
 
 This complete overhaul ensures the feedback system works reliably in all scenarios and provides a professional user experience. 
+
+## 10. UI/UX Improvements - Popup Behavior & Explanation Box Optimization
+
+### Issues Addressed (Latest Fix)
+
+**Issue 1**: Popup randomly closes
+- **Problem**: Users experienced the popup closing unexpectedly when using the "Force Quiz" button
+- **Root Cause**: The popup closed immediately after successfully triggering a quiz without user feedback
+- **Solution**: Added a 1.5-second delay with success notification before closing the popup
+
+**Issue 2**: Review section explanation box is too huge and excessive
+- **Problem**: The explanation box in review mode was visually overwhelming and took up too much space
+- **Root Cause**: Excessive styling with gradients, large borders, shadows, and no height constraints
+- **Solution**: Redesigned with more modest styling and practical constraints
+
+### Changes Implemented
+
+#### 1. Popup Closing Behavior Fix (`popup.js`)
+- **Added Success Notification**: Shows "Quiz triggered successfully!" message before closing
+- **Delayed Closing**: 1.5-second delay allows users to see the success feedback
+- **Improved User Experience**: Users now understand why the popup is closing
+
+**Before:**
+```javascript
+if (response && response.success) {
+  showNotification('Quiz triggered successfully!', 'success');
+  window.close(); // Immediate close
+}
+```
+
+**After:**
+```javascript
+if (response && response.success) {
+  showNotification('Quiz triggered successfully!', 'success');
+  // Brief delay before closing to let user see the success message
+  setTimeout(() => {
+    window.close();
+  }, 1500);
+}
+```
+
+#### 2. Explanation Box Optimization (`content.js`)
+- **Reduced Visual Prominence**: Replaced gradient backgrounds and heavy borders with subtle styling
+- **Added Height Constraints**: Maximum height of 200px with scrolling for long explanations
+- **Improved Readability**: Better line-height and font-size for comfortable reading
+- **Compact Design**: Reduced padding and margins for more efficient space usage
+
+**Styling Changes:**
+- **Background**: Changed from `linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%)` to simple `#f8f9fa`
+- **Border**: Reduced from `2px solid #2196f3` to `1px solid #dee2e6`
+- **Padding**: Reduced from `15px` to `12px`
+- **Max Height**: Added `max-height: 200px` with `overflow-y: auto`
+- **Removed**: Box shadows and gradients for cleaner appearance
+- **Font Size**: Standardized to `13px` for consistent, readable text
+
+**Header Improvements:**
+- **Simplified Color**: Changed from bright blue (`#1976d2`) to neutral gray (`#495057`)
+- **Compact Layout**: Removed flex display and reduced spacing
+- **Consistent Sizing**: Unified font sizes across all explanation elements
+
+**Correct Answer Reveal Improvements:**
+- **Reduced Padding**: From `10px` to `8px`
+- **Added Border**: Subtle border for better definition
+- **Compact Text**: Shorter label "Correct answer:" instead of "The correct answer is:"
+- **Consistent Sizing**: Matched font size with explanation text
+
+### Benefits
+
+#### Popup Behavior
+- **Clear User Feedback**: Users understand the popup is closing because the quiz was successfully triggered
+- **Better UX Flow**: Smooth transition from popup action to quiz display
+- **Reduced Confusion**: No more "random" closing behavior
+
+#### Explanation Box
+- **Better Space Management**: Limited height prevents overwhelming long explanations
+- **Improved Readability**: Cleaner styling focuses attention on content
+- **Professional Appearance**: Subtle, modern design that doesn't distract from learning
+- **Accessibility**: Scrollable content ensures all explanations remain accessible
+- **Consistency**: Uniform styling across all explanation components
+
+### Files Modified
+1. **`popup.js`**: Enhanced force quiz success handling with user feedback
+2. **`content.js`**: Redesigned explanation box styling and constraints
+3. **`EXTENSION_FUNCTIONALITY.md`**: Documented the improvements
+
+### Testing Recommendations
+- Test force quiz functionality to ensure smooth popup closing experience
+- Test quiz completion with various explanation lengths to verify scrolling behavior
+- Verify explanation box appearance across different screen sizes
+- Check that long explanations remain fully accessible with scrolling
+
+These improvements enhance the overall user experience by making interactions more predictable and the interface more polished and professional. 

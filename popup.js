@@ -92,7 +92,10 @@ function setupEventListeners() {
       
       if (response && response.success) {
         showNotification('Quiz triggered successfully!', 'success');
-        window.close(); // Close popup
+        // Brief delay before closing to let user see the success message
+        setTimeout(() => {
+          window.close();
+        }, 1500);
       } else {
         showNotification('Failed to trigger quiz. Try refreshing the page.', 'error');
       }

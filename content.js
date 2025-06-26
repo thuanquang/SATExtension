@@ -650,17 +650,15 @@ class SATQuizBlocker {
       const explanationDiv = document.createElement('div');
       explanationDiv.className = 'explanation-box';
       explanationDiv.style.cssText = `
-        margin-top: 15px;
-        padding: 15px;
-        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-        border: 2px solid #2196f3;
-        border-radius: 8px;
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
         font-size: 14px;
         text-align: left;
-        box-shadow: 0 2px 8px rgba(33, 150, 243, 0.1);
         position: relative;
         word-wrap: break-word;
         overflow-wrap: break-word;
+        line-height: 1.4;
       `;
       
       let revealHtml = '';
@@ -674,40 +672,37 @@ class SATQuizBlocker {
         }
 
         revealHtml = `
-          <div style="padding: 10px; background: #fff3cd; border-radius: 6px; margin-bottom: 12px; color: #856404;">
-            <strong>The correct answer is:</strong> ${correctAnswer} (${correctAnswerText})
+          <div style="padding: 8px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; margin-bottom: 8px; color: #856404; font-size: 13px;">
+            <strong>Correct answer:</strong> ${correctAnswer} (${correctAnswerText})
           </div>
         `;
       }
       
       explanationDiv.innerHTML = `
-        <div style="font-weight: 600; color: #1976d2; margin-bottom: 8px; display: flex; align-items: center;">
-          <span style="margin-right: 8px;">💡</span>
-          Explanation
+        <div style="font-weight: 600; color: #495057; margin-bottom: 8px; font-size: 13px;">
+          💡 Explanation
         </div>
         ${revealHtml}
-        <div style="line-height: 1.5; color: #333; white-space: pre-wrap;">
+        <div class="explanation-content" style="line-height: 1.4; color: #495057; white-space: pre-wrap; font-size: 13px;">
           ${this.currentQuestion.explanation}
         </div>
       `;
       
       feedback.appendChild(explanationDiv);
       
-      // Scroll to the explanation if it's not fully visible
+      // Dynamically constrain height only if needed
       setTimeout(() => {
-        const contentArea = this.modal.querySelector('.quiz-content');
-        if (contentArea) {
-          const explanationRect = explanationDiv.getBoundingClientRect();
-          const contentRect = contentArea.getBoundingClientRect();
-          
-          if (explanationRect.bottom > contentRect.bottom) {
-            explanationDiv.scrollIntoView({ 
-              behavior: 'smooth', 
-              block: 'nearest' 
-            });
-          }
+        const content = explanationDiv.querySelector('.explanation-content');
+        if (content && content.scrollHeight > 200) {
+          explanationDiv.style.maxHeight = '200px';
+          explanationDiv.style.overflowY = 'auto';
+          explanationDiv.style.resize = 'vertical';
+        } else {
+          explanationDiv.style.maxHeight = '';
+          explanationDiv.style.overflowY = '';
+          explanationDiv.style.resize = '';
         }
-      }, 100);
+      }, 0);
     }
   }
 
