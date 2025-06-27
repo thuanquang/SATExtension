@@ -68,19 +68,19 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
       try {
         await chrome.scripting.executeScript({
           target: { tabId: tabId },
-          files: ['config.js']
+          files: ['src/db/config.js']
         });
         await chrome.scripting.executeScript({
           target: { tabId: tabId },
-          files: ['supabase-client.js']
+          files: ['src/db/supabase-client.js']
         });
         await chrome.scripting.executeScript({
           target: { tabId: tabId },
-          files: ['content.js']
+          files: ['src/content/content.js']
         });
         await chrome.scripting.insertCSS({
           target: { tabId: tabId },
-          files: ['styles.css']
+          files: ['src/styles/styles.css']
         });
         console.log('Scripts injected successfully into tab:', tabId);
       } catch (err) {

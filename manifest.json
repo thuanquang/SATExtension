@@ -13,26 +13,26 @@
     "https://*/*"
   ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "src/background/background.js"
   },
   "action": {
-    "default_popup": "popup.html",
+    "default_popup": "src/popup/popup.html",
     "default_title": "SAT Quiz Blocker"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
       "js": [
-        "config.js",
-        "supabase-client.js",
-        "components/QuizState.js",
-        "components/FeedbackManager.js",
-        "components/QuizModal.js",
-        "components/BlockManager.js",
-        "QuizController.js",
-        "content-refactored.js"
+        "src/db/config.js",
+        "src/db/supabase-client.js",
+        "src/components/QuizState.js",
+        "src/components/FeedbackManager.js",
+        "src/components/QuizModal.js",
+        "src/components/BlockManager.js",
+        "src/controller/QuizController.js",
+        "src/content/content-refactored.js"
       ],
-      "css": ["styles.css"],
+      "css": ["src/styles/styles.css"],
       "run_at": "document_end"
     }
   ],
