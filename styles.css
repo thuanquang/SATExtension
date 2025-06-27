@@ -199,13 +199,19 @@
   transform: translateY(-1px);
 }
 
-.option-label.selected * {
+/* Only set color: white for direct children, not all descendants */
+.option-label.selected > .option-letter,
+.option-label.selected > .option-text {
   color: white !important;
 }
 
-.option-label.selected input[type="radio"] {
-  accent-color: white;
-  filter: brightness(1.2);
+/* Remove or restrict the previous .option-label.selected * selector */
+/* .option-label.selected * { color: white !important; } -- REMOVE THIS LINE */
+
+/* Fallback for browsers that don't support :has() */
+.option-label input[type="radio"]:checked ~ .option-letter,
+.option-label input[type="radio"]:checked ~ .option-text {
+  color: white !important;
 }
 
 /* =================================== */
@@ -298,9 +304,9 @@
 }
 
 .feedback-container.error {
-  color: var(--qas-error);
+  color: #b00020;
   background-color: #fdecea;
-  border: 1px solid var(--qas-error);
+  border: 1px solid #f5c6cb;
   padding: 12px;
   animation: fadeInError 0.3s ease-in-out;
 }
