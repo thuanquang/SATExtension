@@ -28,54 +28,51 @@ class FeedbackManager {
     }
   }
 
-  showExplanation(question, revealAnswer = false) {
-    if (!question.explanation) return;
-
+  showExplanation(question, revealAnswer = false, isReviewMode = false) {
     const feedback = this._findFeedbackElement();
-    if (!feedback) return;
-
-    // Remove existing explanations
-    this._clearExplanations(feedback);
-
-    // Create explanation container
+    if (!feedback || !question.explanation) return;
+    // Remove any existing explanation
+    const existingExplanation = feedback.querySelector('.explanation-box');
+    if (existingExplanation) existingExplanation.remove();
     const explanationDiv = document.createElement('div');
     explanationDiv.className = 'explanation-box';
-
-    // Add content
-    const content = [];
-    
-    // Header
-    content.push('<div class="explanation-header">💡 Explanation</div>');
-
-    // Correct answer reveal (if needed)
+    if (isReviewMode) explanationDiv.classList.add('scrollable');
+    let revealHtml = '';
     if (revealAnswer) {
-      const correctAnswer = this._formatCorrectAnswer(question);
-      content.push(`<div class="correct-answer-reveal">${correctAnswer}</div>`);
+      const correctAnswer = question.correct_answer;
+      let correctAnswerText = correctAnswer;
+      if (question.question_type === 'multiple_choice') {
+        const correctIndex = correctAnswer.charCodeAt(0) - 65;
+        correctAnswerText = question.answer_choices[correctIndex];
+      }
+      revealHtml = `
+        <div style="padding: 8px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; margin-bottom: 8px; color: #856404; font-size: 13px;">
+          <strong>Correct answer:</strong> ${correctAnswer} (${correctAnswerText})
+        </div>
+      `;
     }
-
-    // Explanation text
-    content.push(`<div class="explanation-content">${question.explanation}</div>`);
-
-    explanationDiv.innerHTML = content.join('');
+    explanationDiv.innerHTML = `
+      <div style="font-weight: 600; color: #495057; margin-bottom: 8px; font-size: 13px;">
+        💡 Explanation
+      </div>
+      ${revealHtml}
+      <div class="explanation-content" style="line-height: 1.4; color: #495057; white-space: pre-wrap; font-size: 13px;">
+        ${question.explanation}
+      </div>
+    `;
     feedback.appendChild(explanationDiv);
-
-    // Apply dynamic height constraint if needed
-    this._applyHeightConstraint(explanationDiv);
   }
 
   showTimer(timeLeft, message = null) {
-    const feedback = this._findFeedbackElement();
-    if (!feedback) return;
-
-    let timerDiv = feedback.querySelector('.countdown-timer');
-    if (!timerDiv) {
-      timerDiv = document.createElement('div');
-      timerDiv.className = 'countdown-timer';
-      feedback.appendChild(timerDiv);
-    }
-
+    const timerDiv = document.getElementById('footer-timer');
+    if (!timerDiv) return;
     const defaultMessage = `You can continue in ${timeLeft}s. (Or click outside to close)`;
     timerDiv.textContent = message || defaultMessage;
+  }
+
+  clearTimer() {
+    const timerDiv = document.getElementById('footer-timer');
+    if (timerDiv) timerDiv.textContent = '';
   }
 
   clear() {
@@ -89,7 +86,7 @@ class FeedbackManager {
   }
 
   updateAttempts(current, max) {
-    const attemptsElement = document.getElementById('attempts');
+    const attemptsElement = document.getElementById('footer-attempts');
     if (attemptsElement) {
       attemptsElement.textContent = `Attempts: ${current}/${max}`;
     }

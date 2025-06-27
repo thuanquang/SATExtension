@@ -97,19 +97,15 @@ class QuizController {
 
   endQuiz() {
     console.log('🎓 Ending quiz');
-    
     // Clear timer
     this._clearTimer();
-    
+    this.feedback.clearTimer();
     // Remove modal
     this.modal.remove();
-    
     // Unblock website
     this.blockManager.unblock();
-    
     // Reset state
     this.state.reset();
-    
     // Clear feedback
     this.feedback.clear();
   }
@@ -171,8 +167,8 @@ class QuizController {
     // Show success message
     this.feedback.showMessage('✅ Correct! Well done.', 'success');
     
-    // Show explanation
-    this.feedback.showExplanation(this.state.getCurrentQuestion());
+    // Show explanation (scrollable in review mode)
+    this.feedback.showExplanation(this.state.getCurrentQuestion(), false, true);
     
     // Record success
     await this.state.recordSuccess();
@@ -211,8 +207,8 @@ class QuizController {
     // Do NOT enter review mode (no click outside to close)
     this.feedback.showMessage('❌ You have reached the maximum number of attempts.', 'error');
     
-    // Show explanation with correct answer
-    this.feedback.showExplanation(this.state.getCurrentQuestion(), true);
+    // Show explanation with correct answer (scrollable in review mode)
+    this.feedback.showExplanation(this.state.getCurrentQuestion(), true, true);
     
     // Disable inputs
     this.modal.disableInputs();
@@ -224,23 +220,21 @@ class QuizController {
 
   _startCountdownTimer(duration, customMessage = null) {
     this._clearTimer();
-    
+    this.feedback.clearTimer();
     let timeLeft = Math.ceil(duration / 1000);
-    
     const updateTimer = () => {
       if (timeLeft > 0) {
         const message = customMessage 
           ? customMessage.replace('{time}', timeLeft)
           : null;
-        
         this.feedback.showTimer(timeLeft, message);
         timeLeft--;
         this.countdownTimer = setTimeout(updateTimer, 1000);
       } else {
+        this.feedback.clearTimer();
         this.endQuiz();
       }
     };
-    
     updateTimer();
   }
 

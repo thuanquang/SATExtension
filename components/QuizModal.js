@@ -10,14 +10,17 @@ class QuizModal {
   }
 
   create(question) {
+    // Create overlay
+    this.overlay = document.createElement('div');
+    this.overlay.className = 'quiz-overlay';
+    // Create modal
     this.modal = document.createElement('div');
     this.modal.id = 'sat-quiz-modal';
     this.modal.className = 'quiz-modal';
-    
     this.modal.innerHTML = this._generateModalHTML(question);
     this._attachEventListeners();
-    
-    document.body.appendChild(this.modal);
+    this.overlay.appendChild(this.modal);
+    document.body.appendChild(this.overlay);
     return this.modal;
   }
 
@@ -98,7 +101,10 @@ class QuizModal {
       <div class="quiz-footer">
         <button id="submit-answer" class="submit-button disabled" disabled>Submit Answer</button>
         <div id="feedback" class="feedback-container"></div>
-        <div id="attempts" class="attempts-counter">Attempts: 0/3</div>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px;">
+          <div id="footer-attempts" class="attempts-counter">Attempts: 0/3</div>
+          <div id="footer-timer" class="countdown-timer"></div>
+        </div>
       </div>
     `;
   }
