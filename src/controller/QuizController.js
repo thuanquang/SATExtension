@@ -114,8 +114,11 @@ class QuizController {
     // Clear feedback
     this.feedback.clear();
     
-    // Create modal
-    const modalElement = this.modal.create(question);
+    // Get the overlay from BlockManager
+    const overlay = this.blockManager.getOverlay();
+    
+    // Create modal with existing overlay
+    const modalElement = this.modal.create(question, overlay);
     
     // Setup feedback element
     const feedbackElement = modalElement.querySelector('#feedback');
@@ -124,7 +127,7 @@ class QuizController {
     // Setup block manager
     this.blockManager.setModal(modalElement);
     
-    // Show modal
+    // Show modal (this is now handled in create, but ensure it's visible)
     this.modal.show();
     
     // Update attempts display
@@ -163,6 +166,7 @@ class QuizController {
     // Update state
     this.state.setReviewing(true);
     this.blockManager.setReviewMode(true);
+    this.modal.setReviewMode(true);
     
     // Show success message
     this.feedback.showMessage('✅ Correct! Well done.', 'success');

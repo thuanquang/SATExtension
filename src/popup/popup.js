@@ -26,12 +26,32 @@ async function loadStats() {
           const days = Math.floor(diffInMinutes / 1440);
           document.getElementById('last-quiz').textContent = `${days}d ago`;
         }
+        
+        // Check if quiz is due
+        const quizInterval = 30 * 60 * 1000; // 30 minutes in milliseconds
+        const timeSinceLastQuiz = now - lastQuizDate;
+        const isDue = timeSinceLastQuiz >= quizInterval;
+        
+        // Update force quiz button text based on status
+        const forceQuizBtn = document.getElementById('force-quiz');
+        if (isDue) {
+          forceQuizBtn.textContent = '🎯 Take Quiz Now';
+          forceQuizBtn.title = 'A quiz is due based on your schedule';
+        } else {
+          const remainingMinutes = Math.ceil((quizInterval - timeSinceLastQuiz) / (1000 * 60));
+          forceQuizBtn.textContent = '⚡ Force Quiz Now';
+          forceQuizBtn.title = `Next scheduled quiz in ${remainingMinutes} minutes, or force one now`;
+        }
       } else {
         document.getElementById('last-quiz').textContent = 'Never';
+        const forceQuizBtn = document.getElementById('force-quiz');
+        forceQuizBtn.textContent = '🎯 Take First Quiz';
+        forceQuizBtn.title = 'Take your first quiz now';
       }
     }
   } catch (error) {
     console.error('Error loading stats:', error);
+    showNotification('Error loading quiz statistics', 'error');
   }
 }
 
@@ -72,11 +92,23 @@ function setupEventListeners() {
     try {
       console.log('Force quiz button clicked');
       
+      // Show loading state
+      const forceQuizBtn = document.getElementById('force-quiz');
+      const originalText = forceQuizBtn.textContent;
+      forceQuizBtn.textContent = '⏳ Loading...';
+      forceQuizBtn.disabled = true;
+      
       // Get the current active tab
       const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
       
       if (!tab) {
-        showNotification('No active tab found', 'error');
+        showNotification('No active tab found. Please select a tab with a webpage.', 'error');
+        return;
+      }
+      
+      // Check if tab URL is valid for content scripts
+      if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('edge://') || tab.url.startsWith('about:')) {
+        showNotification('Quiz cannot run on browser internal pages. Please navigate to a regular website.', 'error');
         return;
       }
       
@@ -91,24 +123,36 @@ function setupEventListeners() {
       console.log('Force quiz response:', response);
       
       if (response && response.success) {
-        showNotification('Quiz triggered successfully!', 'success');
+        showNotification('Quiz triggered successfully! Check the webpage.', 'success');
         // Brief delay before closing to let user see the success message
         setTimeout(() => {
           window.close();
-        }, 1500);
+        }, 2000);
+      } else if (response && response.error) {
+        showNotification(`Quiz failed: ${response.error}`, 'error');
       } else {
-        showNotification('Failed to trigger quiz. Try refreshing the page.', 'error');
+        showNotification('Failed to trigger quiz. The extension may not be active on this page.', 'error');
       }
       
     } catch (error) {
       console.error('Error forcing quiz:', error);
       
-      // Check if it's a connection error
+      // Provide specific error messages
       if (error.message && error.message.includes('Could not establish connection')) {
-        showNotification('Extension not active on this page. Try refreshing the page.', 'error');
+        showNotification('Extension not loaded on this page. Try refreshing and ensure the page is a regular website.', 'error');
+      } else if (error.message && error.message.includes('receiving end does not exist')) {
+        showNotification('Content script not ready. Please refresh the page and try again.', 'error');
       } else {
-        showNotification('Error forcing quiz: ' + error.message, 'error');
+        showNotification(`Error: ${error.message || 'Unknown error occurred'}`, 'error');
       }
+    } finally {
+      // Restore button state
+      const forceQuizBtn = document.getElementById('force-quiz');
+      setTimeout(() => {
+        forceQuizBtn.disabled = false;
+        // Reload stats to get updated button text
+        loadStats();
+      }, 1500);
     }
   });
 }

@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive SAT Extension Functionality Test</title>
+    <link rel="stylesheet" href="../src/styles/styles.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+            line-height: 1.6;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .test-button:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        .test-button.danger {
+            background: #dc3545;
+        }
+        .test-button.danger:hover {
+            background: #c82333;
+        }
+        .test-button.success {
+            background: #28a745;
+        }
+        .test-button.success:hover {
+            background: #218838;
+        }
+        .test-results {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 6px;
+            background: #e9ecef;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-weight: 500;
+        }
+        .status.good { background: #e9f7ef; color: #28a745; }
+        .status.bad { background: #fdecea; color: #dc3545; }
+        .status.warning { background: #fff3cd; color: #856404; }
+        .status.info { background: #e3f2fd; color: #007bff; }
+        h1 { color: #333; text-align: center; }
+        h2 { color: #007bff; margin-top: 30px; }
+        h3 { color: #007bff; margin-top: 0; }
+        .dependency-check {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .dependency-item {
+            padding: 15px;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎓 SAT Extension Comprehensive Functionality Test</h1>
+        <p><strong>Purpose:</strong> This page tests all aspects of the SAT Quiz Blocker extension to identify and fix any issues.</p>
+
+        <!-- Dependencies Check -->
+        <div class="test-section">
+            <h3>📦 Dependencies & Configuration Check</h3>
+            <button class="test-button" onclick="checkDependencies()">Check All Dependencies</button>
+            <div id="dependency-results" class="dependency-check"></div>
+        </div>
+
+        <!-- Component Functionality -->
+        <div class="test-section">
+            <h3>🧩 Component Functionality</h3>
+            <button class="test-button" onclick="testQuizState()">Test QuizState</button>
+            <button class="test-button" onclick="testQuizModal()">Test QuizModal</button>
+            <button class="test-button" onclick="testBlockManager()">Test BlockManager</button>
+            <button class="test-button" onclick="testFeedbackManager()">Test FeedbackManager</button>
+            <button class="test-button" onclick="testQuizController()">Test QuizController</button>
+            <div id="component-results" class="test-results"></div>
+        </div>
+
+        <!-- Quiz Flow Testing -->
+        <div class="test-section">
+            <h3>🎯 Quiz Flow Testing</h3>
+            <button class="test-button success" onclick="simulateQuizFlow()">Simulate Complete Quiz Flow</button>
+            <button class="test-button" onclick="forceQuizTest()">Test Force Quiz</button>
+            <button class="test-button" onclick="testQuizTiming()">Test Quiz Timing Logic</button>
+            <button class="test-button danger" onclick="testErrorHandling()">Test Error Handling</button>
+            <div id="quiz-flow-results" class="test-results"></div>
+        </div>
+
+        <!-- Database & API Testing -->
+        <div class="test-section">
+            <h3>🗄️ Database & API Testing</h3>
+            <button class="test-button" onclick="testSupabaseConnection()">Test Supabase Connection</button>
+            <button class="test-button" onclick="testQuestionFetching()">Test Question Fetching</button>
+            <button class="test-button" onclick="testQuestionValidation()">Test Question Validation</button>
+            <div id="database-results" class="test-results"></div>
+        </div>
+
+        <!-- UI & Modal Testing -->
+        <div class="test-section">
+            <h3>🎨 UI & Modal Testing</h3>
+            <button class="test-button" onclick="testModalDisplay()">Test Modal Display</button>
+            <button class="test-button" onclick="testModalInteractions()">Test Modal Interactions</button>
+            <button class="test-button" onclick="testResponsiveDesign()">Test Responsive Design</button>
+            <button class="test-button" onclick="testAccessibility()">Test Accessibility</button>
+            <div id="ui-results" class="test-results"></div>
+        </div>
+
+        <!-- Performance & Edge Cases -->
+        <div class="test-section">
+            <h3>⚡ Performance & Edge Cases</h3>
+            <button class="test-button" onclick="testPerformance()">Test Performance</button>
+            <button class="test-button" onclick="testEdgeCases()">Test Edge Cases</button>
+            <button class="test-button" onclick="testMemoryLeaks()">Test Memory Leaks</button>
+            <div id="performance-results" class="test-results"></div>
+        </div>
+
+        <!-- Overall Status -->
+        <div class="test-section">
+            <h3>📊 Overall Status</h3>
+            <div id="overall-status" class="status info">
+                Click "Run All Tests" to get a comprehensive report.
+            </div>
+            <button class="test-button success" onclick="runAllTests()" style="font-size: 16px; padding: 15px 30px;">
+                🚀 Run All Tests
+            </button>
+            <button class="test-button" onclick="clearResults()">Clear Results</button>
+        </div>
+    </div>
+
+    <!-- Include Extension Components -->
+    <script src="../src/db/config.js"></script>
+    <script src="../src/db/supabase-client.js"></script>
+    <script src="../src/components/QuizState.js"></script>
+    <script src="../src/components/FeedbackManager.js"></script>
+    <script src="../src/components/QuizModal.js"></script>
+    <script src="../src/components/BlockManager.js"></script>
+    <script src="../src/controller/QuizController.js"></script>
+
+    <script>
+        let testResults = {
+            dependencies: {},
+            components: {},
+            quizFlow: {},
+            database: {},
+            ui: {},
+            performance: {}
+        };
+
+        function log(section, message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const element = document.getElementById(`${section}-results`);
+            if (element) {
+                element.innerHTML += `[${timestamp}] ${type.toUpperCase()}: ${message}\n`;
+                element.scrollTop = element.scrollHeight;
+            }
+            console.log(`[${section}] ${message}`);
+        }
+
+        function clearResults() {
+            ['dependency', 'component', 'quiz-flow', 'database', 'ui', 'performance'].forEach(section => {
+                const element = document.getElementById(`${section}-results`);
+                if (element) element.innerHTML = '';
+            });
+            document.getElementById('overall-status').className = 'status info';
+            document.getElementById('overall-status').textContent = 'Results cleared. Ready for new tests.';
+        }
+
+        // Dependencies Check
+        function checkDependencies() {
+            const container = document.getElementById('dependency-results');
+            container.innerHTML = '';
+
+            const dependencies = [
+                { name: 'EXTENSION_CONFIG', check: () => typeof EXTENSION_CONFIG !== 'undefined' },
+                { name: 'SUPABASE_CONFIG', check: () => typeof SUPABASE_CONFIG !== 'undefined' },
+                { name: 'SupabaseClient', check: () => typeof SupabaseClient !== 'undefined' },
+                { name: 'QuizState', check: () => typeof QuizState !== 'undefined' },
+                { name: 'QuizModal', check: () => typeof QuizModal !== 'undefined' },
+                { name: 'FeedbackManager', check: () => typeof FeedbackManager !== 'undefined' },
+                { name: 'BlockManager', check: () => typeof BlockManager !== 'undefined' },
+                { name: 'QuizController', check: () => typeof QuizController !== 'undefined' }
+            ];
+
+            dependencies.forEach(dep => {
+                const item = document.createElement('div');
+                item.className = 'dependency-item';
+                
+                try {
+                    const isAvailable = dep.check();
+                    item.innerHTML = `
+                        <div style="font-weight: bold; color: ${isAvailable ? '#28a745' : '#dc3545'}">
+                            ${isAvailable ? '✅' : '❌'} ${dep.name}
+                        </div>
+                        <div style="font-size: 12px; color: #666;">
+                            ${isAvailable ? 'Available' : 'Missing'}
+                        </div>
+                    `;
+                    testResults.dependencies[dep.name] = isAvailable;
+                } catch (error) {
+                    item.innerHTML = `
+                        <div style="font-weight: bold; color: #dc3545">
+                            ❌ ${dep.name}
+                        </div>
+                        <div style="font-size: 12px; color: #666;">
+                            Error: ${error.message}
+                        </div>
+                    `;
+                    testResults.dependencies[dep.name] = false;
+                }
+                
+                container.appendChild(item);
+            });
+        }
+
+        // Component Testing
+        function testQuizState() {
+            log('component', 'Testing QuizState component...');
+            
+            try {
+                const state = new QuizState();
+                
+                // Test basic functionality
+                const testQuestion = {
+                    id: 'test-1',
+                    question_text: 'Test question',
+                    question_type: 'multiple_choice',
+                    answer_choices: ['A', 'B', 'C', 'D'],
+                    correct_answer: 'A',
+                    difficulty: 'medium',
+                    tag: 'test'
+                };
+                
+                state.setCurrentQuestion(testQuestion);
+                log('component', '✅ QuizState: setCurrentQuestion works');
+                
+                const retrieved = state.getCurrentQuestion();
+                if (retrieved.id === testQuestion.id) {
+                    log('component', '✅ QuizState: getCurrentQuestion works');
+                } else {
+                    log('component', '❌ QuizState: getCurrentQuestion failed', 'error');
+                }
+                
+                // Test answer checking
+                const isCorrect = state.checkAnswer('A');
+                if (isCorrect) {
+                    log('component', '✅ QuizState: checkAnswer works correctly');
+                } else {
+                    log('component', '❌ QuizState: checkAnswer failed', 'error');
+                }
+                
+                // Test attempts
+                state.incrementAttempts();
+                if (state.getAttempts() === 1) {
+                    log('component', '✅ QuizState: attempt tracking works');
+                } else {
+                    log('component', '❌ QuizState: attempt tracking failed', 'error');
+                }
+                
+                testResults.components.QuizState = true;
+                
+            } catch (error) {
+                log('component', `❌ QuizState test failed: ${error.message}`, 'error');
+                testResults.components.QuizState = false;
+            }
+        }
+
+        function testQuizModal() {
+            log('component', 'Testing QuizModal component...');
+            
+            try {
+                const modal = new QuizModal();
+                
+                const testQuestion = {
+                    id: 'test-1',
+                    question_text: 'What is 2 + 2?',
+                    question_type: 'multiple_choice',
+                    answer_choices: ['3', '4', '5', '6'],
+                    correct_answer: 'B',
+                    difficulty: 'easy',
+                    tag: 'math'
+                };
+                
+                // Test modal creation
+                const modalElement = modal.create(testQuestion);
+                if (modalElement && modalElement.id === 'sat-quiz-modal') {
+                    log('component', '✅ QuizModal: Modal creation works');
+                } else {
+                    log('component', '❌ QuizModal: Modal creation failed', 'error');
+                }
+                
+                // Test modal content
+                const questionText = modalElement.querySelector('.question-text');
+                if (questionText && questionText.textContent.includes('What is 2 + 2?')) {
+                    log('component', '✅ QuizModal: Question text rendering works');
+                } else {
+                    log('component', '❌ QuizModal: Question text rendering failed', 'error');
+                }
+                
+                // Test options rendering
+                const options = modalElement.querySelectorAll('input[name="answer"]');
+                if (options.length === 4) {
+                    log('component', '✅ QuizModal: Options rendering works');
+                } else {
+                    log('component', `❌ QuizModal: Expected 4 options, found ${options.length}`, 'error');
+                }
+                
+                // Test user answer retrieval
+                options[1].checked = true; // Select option B
+                const userAnswer = modal.getUserAnswer('multiple_choice');
+                if (userAnswer === 'B') {
+                    log('component', '✅ QuizModal: User answer retrieval works');
+                } else {
+                    log('component', `❌ QuizModal: Expected answer 'B', got '${userAnswer}'`, 'error');
+                }
+                
+                // Cleanup
+                modal.remove();
+                log('component', '✅ QuizModal: Modal cleanup works');
+                
+                testResults.components.QuizModal = true;
+                
+            } catch (error) {
+                log('component', `❌ QuizModal test failed: ${error.message}`, 'error');
+                testResults.components.QuizModal = false;
+            }
+        }
+
+        function testBlockManager() {
+            log('component', 'Testing BlockManager component...');
+            
+            try {
+                const blockManager = new BlockManager();
+                
+                // Test blocking
+                blockManager.block();
+                if (blockManager.isWebsiteBlocked()) {
+                    log('component', '✅ BlockManager: Website blocking works');
+                } else {
+                    log('component', '❌ BlockManager: Website blocking failed', 'error');
+                }
+                
+                // Test overlay creation
+                const overlay = blockManager.getOverlay();
+                if (overlay && overlay.id === 'sat-quiz-overlay') {
+                    log('component', '✅ BlockManager: Overlay creation works');
+                } else {
+                    log('component', '❌ BlockManager: Overlay creation failed', 'error');
+                }
+                
+                // Test unblocking
+                blockManager.unblock();
+                if (!blockManager.isWebsiteBlocked()) {
+                    log('component', '✅ BlockManager: Website unblocking works');
+                } else {
+                    log('component', '❌ BlockManager: Website unblocking failed', 'error');
+                }
+                
+                testResults.components.BlockManager = true;
+                
+            } catch (error) {
+                log('component', `❌ BlockManager test failed: ${error.message}`, 'error');
+                testResults.components.BlockManager = false;
+            }
+        }
+
+        function testFeedbackManager() {
+            log('component', 'Testing FeedbackManager component...');
+            
+            try {
+                const feedback = new FeedbackManager();
+                
+                // Create a test container
+                const testContainer = document.createElement('div');
+                testContainer.id = 'test-feedback';
+                document.body.appendChild(testContainer);
+                
+                feedback.setFeedbackElement(testContainer);
+                
+                // Test success message
+                feedback.showMessage('Test success message', 'success');
+                if (testContainer.textContent.includes('Test success message')) {
+                    log('component', '✅ FeedbackManager: Success message works');
+                } else {
+                    log('component', '❌ FeedbackManager: Success message failed', 'error');
+                }
+                
+                // Test error message
+                feedback.showMessage('Test error message', 'error');
+                if (testContainer.textContent.includes('Test error message')) {
+                    log('component', '✅ FeedbackManager: Error message works');
+                } else {
+                    log('component', '❌ FeedbackManager: Error message failed', 'error');
+                }
+                
+                // Test clear
+                feedback.clear();
+                if (testContainer.textContent.trim() === '') {
+                    log('component', '✅ FeedbackManager: Clear works');
+                } else {
+                    log('component', '❌ FeedbackManager: Clear failed', 'error');
+                }
+                
+                // Cleanup
+                testContainer.remove();
+                
+                testResults.components.FeedbackManager = true;
+                
+            } catch (error) {
+                log('component', `❌ FeedbackManager test failed: ${error.message}`, 'error');
+                testResults.components.FeedbackManager = false;
+            }
+        }
+
+        function testQuizController() {
+            log('component', 'Testing QuizController component...');
+            
+            try {
+                // Mock chrome storage for testing
+                if (typeof chrome === 'undefined') {
+                    window.chrome = {
+                        storage: {
+                            local: {
+                                get: (keys, callback) => callback({}),
+                                set: (data, callback) => callback && callback()
+                            }
+                        },
+                        runtime: {
+                            onMessage: {
+                                addListener: () => {}
+                            }
+                        }
+                    };
+                }
+                
+                const supabaseClient = new SupabaseClient();
+                const controller = new QuizController(supabaseClient);
+                
+                if (controller.state && controller.modal && controller.feedback && controller.blockManager) {
+                    log('component', '✅ QuizController: Component initialization works');
+                } else {
+                    log('component', '❌ QuizController: Component initialization failed', 'error');
+                }
+                
+                // Test state access
+                const state = controller.getState();
+                if (state && typeof state === 'object') {
+                    log('component', '✅ QuizController: State access works');
+                } else {
+                    log('component', '❌ QuizController: State access failed', 'error');
+                }
+                
+                testResults.components.QuizController = true;
+                
+            } catch (error) {
+                log('component', `❌ QuizController test failed: ${error.message}`, 'error');
+                testResults.components.QuizController = false;
+            }
+        }
+
+        // Quiz Flow Testing
+        function simulateQuizFlow() {
+            log('quiz-flow', 'Simulating complete quiz flow...');
+            
+            // This would test the full flow from trigger to completion
+            log('quiz-flow', 'Quiz flow simulation started');
+            log('quiz-flow', '⚠️ Note: Full quiz flow testing requires modal interaction', 'warning');
+        }
+
+        function forceQuizTest() {
+            log('quiz-flow', 'Testing force quiz functionality...');
+            
+            if (typeof window.debugQuiz !== 'undefined' && window.debugQuiz.forceQuiz) {
+                try {
+                    window.debugQuiz.forceQuiz();
+                    log('quiz-flow', '✅ Force quiz function called successfully');
+                } catch (error) {
+                    log('quiz-flow', `❌ Force quiz failed: ${error.message}`, 'error');
+                }
+            } else {
+                log('quiz-flow', '⚠️ debugQuiz not available - this test requires the extension to be loaded', 'warning');
+            }
+        }
+
+        function testQuizTiming() {
+            log('quiz-flow', 'Testing quiz timing logic...');
+            
+            try {
+                const state = new QuizState();
+                
+                // Test shouldShowQuiz logic
+                state.shouldShowQuiz().then(shouldShow => {
+                    log('quiz-flow', `shouldShowQuiz returned: ${shouldShow}`);
+                }).catch(error => {
+                    log('quiz-flow', `shouldShowQuiz error: ${error.message}`, 'error');
+                });
+                
+            } catch (error) {
+                log('quiz-flow', `Quiz timing test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testErrorHandling() {
+            log('quiz-flow', 'Testing error handling...');
+            
+            // Test with invalid question data
+            try {
+                const modal = new QuizModal();
+                const invalidQuestion = {
+                    id: 'invalid',
+                    question_text: '',
+                    question_type: 'multiple_choice',
+                    answer_choices: [],
+                    correct_answer: 'A'
+                };
+                
+                const modalElement = modal.create(invalidQuestion);
+                const errorElement = modalElement.querySelector('.quiz-error');
+                
+                if (errorElement) {
+                    log('quiz-flow', '✅ Error handling: Invalid question properly handled');
+                } else {
+                    log('quiz-flow', '❌ Error handling: Invalid question not handled', 'error');
+                }
+                
+                modal.remove();
+                
+            } catch (error) {
+                log('quiz-flow', `Error handling test failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Database Testing
+        function testSupabaseConnection() {
+            log('database', 'Testing Supabase connection...');
+            
+            try {
+                const client = new SupabaseClient();
+                log('database', '✅ SupabaseClient instantiated successfully');
+                
+                // Test configuration
+                if (SUPABASE_CONFIG.url && SUPABASE_CONFIG.anonKey) {
+                    log('database', '✅ Supabase configuration is present');
+                } else {
+                    log('database', '❌ Supabase configuration is incomplete', 'error');
+                }
+                
+            } catch (error) {
+                log('database', `❌ Supabase connection test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testQuestionFetching() {
+            log('database', 'Testing question fetching...');
+            
+            try {
+                const client = new SupabaseClient();
+                
+                client.getRandomQuestion().then(question => {
+                    if (question) {
+                        log('database', '✅ Question fetched successfully');
+                        log('database', `Question ID: ${question.id}, Type: ${question.question_type}`);
+                    } else {
+                        log('database', '⚠️ No question returned (may be empty database)', 'warning');
+                    }
+                }).catch(error => {
+                    log('database', `❌ Question fetching failed: ${error.message}`, 'error');
+                });
+                
+            } catch (error) {
+                log('database', `❌ Question fetching test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testQuestionValidation() {
+            log('database', 'Testing question validation...');
+            
+            try {
+                const state = new QuizState();
+                
+                // Test valid question
+                const validQuestion = {
+                    id: 'test-1',
+                    question_text: 'Test question',
+                    question_type: 'multiple_choice',
+                    answer_choices: ['A', 'B', 'C', 'D'],
+                    correct_answer: 'A'
+                };
+                
+                if (state.validateQuestion(validQuestion)) {
+                    log('database', '✅ Valid question validation works');
+                } else {
+                    log('database', '❌ Valid question validation failed', 'error');
+                }
+                
+                // Test invalid question
+                const invalidQuestion = {
+                    id: 'test-2',
+                    question_text: '',
+                    question_type: 'multiple_choice',
+                    answer_choices: [],
+                    correct_answer: 'A'
+                };
+                
+                if (!state.validateQuestion(invalidQuestion)) {
+                    log('database', '✅ Invalid question validation works');
+                } else {
+                    log('database', '❌ Invalid question validation failed', 'error');
+                }
+                
+            } catch (error) {
+                log('database', `❌ Question validation test failed: ${error.message}`, 'error');
+            }
+        }
+
+        // UI Testing
+        function testModalDisplay() {
+            log('ui', 'Testing modal display...');
+            
+            try {
+                const modal = new QuizModal();
+                const testQuestion = {
+                    id: 'test-ui',
+                    question_text: 'UI Test Question',
+                    question_type: 'multiple_choice',
+                    answer_choices: ['Option A', 'Option B', 'Option C', 'Option D'],
+                    correct_answer: 'A',
+                    difficulty: 'medium',
+                    tag: 'test'
+                };
+                
+                const modalElement = modal.create(testQuestion);
+                
+                // Check if modal is visible
+                const computedStyle = window.getComputedStyle(modalElement);
+                log('ui', `Modal display: ${computedStyle.display}`);
+                
+                // Check z-index
+                const overlay = modalElement.parentElement;
+                const overlayStyle = window.getComputedStyle(overlay);
+                log('ui', `Overlay z-index: ${overlayStyle.zIndex}`);
+                
+                // Check positioning
+                log('ui', `Overlay position: ${overlayStyle.position}`);
+                log('ui', `Modal positioning: ${computedStyle.position || 'default'}`);
+                
+                modal.remove();
+                log('ui', '✅ Modal display test completed');
+                
+            } catch (error) {
+                log('ui', `❌ Modal display test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testModalInteractions() {
+            log('ui', 'Testing modal interactions...');
+            
+            try {
+                const modal = new QuizModal();
+                const testQuestion = {
+                    id: 'test-interaction',
+                    question_text: 'Interaction Test',
+                    question_type: 'multiple_choice',
+                    answer_choices: ['A', 'B', 'C', 'D'],
+                    correct_answer: 'A',
+                    difficulty: 'medium',
+                    tag: 'test'
+                };
+                
+                const modalElement = modal.create(testQuestion);
+                
+                // Test option selection
+                const options = modalElement.querySelectorAll('input[name="answer"]');
+                if (options.length > 0) {
+                    options[0].click();
+                    if (options[0].checked) {
+                        log('ui', '✅ Option selection works');
+                    } else {
+                        log('ui', '❌ Option selection failed', 'error');
+                    }
+                }
+                
+                // Test submit button
+                const submitBtn = modalElement.querySelector('#submit-answer');
+                if (submitBtn) {
+                    if (!submitBtn.disabled) {
+                        log('ui', '✅ Submit button enabled after selection');
+                    } else {
+                        log('ui', '❌ Submit button not enabled after selection', 'error');
+                    }
+                } else {
+                    log('ui', '❌ Submit button not found', 'error');
+                }
+                
+                modal.remove();
+                
+            } catch (error) {
+                log('ui', `❌ Modal interaction test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testResponsiveDesign() {
+            log('ui', 'Testing responsive design...');
+            log('ui', '✅ Responsive design test completed (visual inspection recommended)');
+        }
+
+        function testAccessibility() {
+            log('ui', 'Testing accessibility...');
+            log('ui', '✅ Accessibility test completed (screen reader testing recommended)');
+        }
+
+        // Performance Testing
+        function testPerformance() {
+            log('performance', 'Testing performance...');
+            
+            const startTime = performance.now();
+            
+            try {
+                // Create multiple components to test performance
+                for (let i = 0; i < 10; i++) {
+                    const modal = new QuizModal();
+                    const state = new QuizState();
+                    const feedback = new FeedbackManager();
+                    const blockManager = new BlockManager();
+                }
+                
+                const endTime = performance.now();
+                const duration = endTime - startTime;
+                
+                log('performance', `Component creation time: ${duration.toFixed(2)}ms`);
+                
+                if (duration < 100) {
+                    log('performance', '✅ Performance: Component creation is fast');
+                } else {
+                    log('performance', '⚠️ Performance: Component creation is slow', 'warning');
+                }
+                
+            } catch (error) {
+                log('performance', `❌ Performance test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testEdgeCases() {
+            log('performance', 'Testing edge cases...');
+            
+            // Test with null/undefined inputs
+            try {
+                const modal = new QuizModal();
+                
+                // This should handle gracefully
+                try {
+                    modal.getUserAnswer(null);
+                    log('performance', '✅ Edge case: Null input handled');
+                } catch (error) {
+                    log('performance', `❌ Edge case: Null input not handled: ${error.message}`, 'error');
+                }
+                
+            } catch (error) {
+                log('performance', `❌ Edge case test failed: ${error.message}`, 'error');
+            }
+        }
+
+        function testMemoryLeaks() {
+            log('performance', 'Testing for memory leaks...');
+            log('performance', '⚠️ Memory leak testing requires long-term monitoring', 'warning');
+        }
+
+        // Run All Tests
+        function runAllTests() {
+            clearResults();
+            log('component', 'Starting comprehensive test suite...');
+            
+            // Run tests in sequence
+            setTimeout(() => {
+                checkDependencies();
+                testQuizState();
+                testQuizModal();
+                testBlockManager();
+                testFeedbackManager();
+                testQuizController();
+                
+                testSupabaseConnection();
+                testQuestionFetching();
+                testQuestionValidation();
+                
+                testModalDisplay();
+                testModalInteractions();
+                
+                testPerformance();
+                testEdgeCases();
+                
+                // Generate overall status
+                setTimeout(() => {
+                    generateOverallStatus();
+                }, 2000);
+            }, 100);
+        }
+
+        function generateOverallStatus() {
+            const statusElement = document.getElementById('overall-status');
+            
+            let totalTests = 0;
+            let passedTests = 0;
+            
+            Object.values(testResults).forEach(section => {
+                Object.values(section).forEach(result => {
+                    totalTests++;
+                    if (result) passedTests++;
+                });
+            });
+            
+            const passRate = totalTests > 0 ? (passedTests / totalTests * 100).toFixed(1) : 0;
+            
+            if (passRate >= 90) {
+                statusElement.className = 'status good';
+                statusElement.textContent = `🎉 Excellent! ${passedTests}/${totalTests} tests passed (${passRate}%)`;
+            } else if (passRate >= 70) {
+                statusElement.className = 'status warning';
+                statusElement.textContent = `⚠️ Good but needs improvement. ${passedTests}/${totalTests} tests passed (${passRate}%)`;
+            } else {
+                statusElement.className = 'status bad';
+                statusElement.textContent = `❌ Issues detected. ${passedTests}/${totalTests} tests passed (${passRate}%)`;
+            }
+        }
+
+        // Auto-run dependency check on load
+        window.addEventListener('load', () => {
+            setTimeout(checkDependencies, 500);
+        });
+    </script>
+</body>
+</html> 

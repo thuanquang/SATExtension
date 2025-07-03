@@ -120,8 +120,47 @@ if (typeof window !== 'undefined') {
       if (controller) {
         controller._handleIncorrectAnswer();
       }
+    },
+    // Additional debug helpers
+    forceQuizDue: async () => {
+      const controller = QuizController.getInstance();
+      if (controller && controller.state) {
+        const result = await controller.state.forceQuizDue();
+        console.log('🎓 Quiz timing reset:', result);
+        return result;
+      }
+      return false;
+    },
+    checkTiming: async () => {
+      const controller = QuizController.getInstance();
+      if (controller && controller.state) {
+        const shouldShow = await controller.state.shouldShowQuiz();
+        console.log('🎓 Should show quiz:', shouldShow);
+        return shouldShow;
+      }
+      return false;
+    },
+    getStats: async () => {
+      const controller = QuizController.getInstance();
+      if (controller && controller.state) {
+        const stats = await controller.state.getStats();
+        console.log('🎓 Current stats:', stats);
+        return stats;
+      }
+      return null;
+    },
+    resetStats: async () => {
+      const controller = QuizController.getInstance();
+      if (controller && controller.state) {
+        const result = await controller.state.resetStats();
+        console.log('🎓 Stats reset:', result);
+        return result;
+      }
+      return false;
     }
   };
   
   console.log('🎓 Debug helpers available at window.debugQuiz');
+  console.log('🎓 Available methods:', Object.keys(window.debugQuiz));
+  console.log('🎓 Try: await debugQuiz.checkTiming() or debugQuiz.forceQuiz()');
 } 

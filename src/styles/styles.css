@@ -21,7 +21,7 @@
   width: 100vw;
   height: 100vh;
   background: rgba(33, 37, 41, 0.85);
-  z-index: 999999;
+  z-index: 2147483647; /* Maximum z-index to ensure always on top */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -42,6 +42,8 @@
   animation: modalSlideIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   border-top: 4px solid var(--qas-blue);
   justify-content: flex-start;
+  position: relative;
+  z-index: 1000000;
 }
 
 @keyframes modalSlideIn {
@@ -162,6 +164,7 @@
   color: var(--qas-dark-text);
   font-size: 16px;
   line-height: 1.5;
+  position: relative;
 }
 
 .option-label:hover:not(.selected) {
@@ -232,7 +235,8 @@
 }
 
 .numeric-answer:focus {
-  outline: none;
+  outline: 3px solid var(--qas-blue);
+  outline-offset: 2px;
   border-color: var(--qas-blue);
   box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
@@ -537,16 +541,115 @@
 /*         ACCESSIBILITY               */
 /* =================================== */
 
+.quiz-modal:focus {
+  outline: none;
+}
+
+@media (prefers-contrast: high) {
+  .quiz-modal {
+    border: 2px solid #000;
+  }
+  
+  .option-label {
+    border: 2px solid #000;
+  }
+  
+  .submit-button {
+    border: 2px solid #000;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quiz-modal {
+    animation: none;
+  }
+  
+  .option-label {
+    transition: none;
+  }
+  
+  .submit-button {
+    transition: none;
+  }
+}
+
 .option-label:focus-within {
-  outline: 2px solid var(--qas-blue);
+  outline: 3px solid var(--qas-blue);
   outline-offset: 2px;
+  border-color: var(--qas-blue);
 }
 
 .submit-button:focus {
-  outline: 2px solid var(--qas-blue);
+  outline: 3px solid var(--qas-blue);
   outline-offset: 2px;
 }
 
+.instruction-toggle:focus {
+  outline: 3px solid var(--qas-blue);
+  outline-offset: 2px;
+}
+
+.numeric-answer:focus {
+  outline: 3px solid var(--qas-blue);
+  outline-offset: 2px;
+  border-color: var(--qas-blue);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* Skip to content for screen readers */
+.skip-to-content {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: var(--qas-blue);
+  color: white;
+  padding: 8px;
+  text-decoration: none;
+  border-radius: 4px;
+  z-index: 100;
+}
+
+.skip-to-content:focus {
+  top: 6px;
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  :root {
+    --qas-blue: #0000EE;
+    --qas-dark-text: #000000;
+    --qas-light-text: #000000;
+    --qas-background: #FFFFFF;
+    --qas-light-gray: #FFFFFF;
+    --qas-border-color: #000000;
+    --qas-success: #008000;
+    --qas-error: #FF0000;
+  }
+}
+
+/* Focus management for modal */
+.quiz-overlay[aria-hidden="false"] .quiz-modal {
+  animation: modalSlideIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.quiz-overlay[aria-hidden="true"] {
+  display: none !important;
+}
+
+/* Scrollbar styling for modal content */
 .quiz-modal::-webkit-scrollbar {
   width: 8px;
 }

@@ -60,11 +60,28 @@ class QuizState {
       const lastQuizTime = await this.getStorageData('lastQuizTime');
       const currentTime = Date.now();
       
+      console.log('🎓 Quiz timing check:', {
+        lastQuizTime: lastQuizTime ? new Date(lastQuizTime).toLocaleString() : 'Never',
+        currentTime: new Date(currentTime).toLocaleString(),
+        interval: this.quizInterval / (1000 * 60) + ' minutes'
+      });
+      
       // Show quiz if never taken or if interval has passed
-      return !lastQuizTime || (currentTime - lastQuizTime) > this.quizInterval;
+      const shouldShow = !lastQuizTime || (currentTime - lastQuizTime) > this.quizInterval;
+      
+      if (shouldShow) {
+        console.log('🎓 Quiz is due - showing quiz');
+      } else {
+        const remainingTime = this.quizInterval - (currentTime - lastQuizTime);
+        const remainingMinutes = Math.ceil(remainingTime / (1000 * 60));
+        console.log(`🎓 Quiz not due yet - ${remainingMinutes} minutes remaining`);
+      }
+      
+      return shouldShow;
     } catch (error) {
-      console.error('Error checking quiz status:', error);
-      return true; // Show quiz on error
+      console.error('🎓 Error checking quiz status:', error);
+      // Show quiz on error to ensure extension works
+      return true;
     }
   }
 
@@ -115,10 +132,23 @@ class QuizState {
         this.setStorageData('lastQuizTime', null)
       ]);
       
-      console.log('Stats reset successfully');
+      console.log('🎓 Stats reset successfully');
       return true;
     } catch (error) {
-      console.error('Error resetting stats:', error);
+      console.error('🎓 Error resetting stats:', error);
+      return false;
+    }
+  }
+
+  async forceQuizDue() {
+    try {
+      // Set lastQuizTime to far in the past to make quiz due
+      const farPast = Date.now() - (this.quizInterval + 60000); // 1 minute past due
+      await this.setStorageData('lastQuizTime', farPast);
+      console.log('🎓 Quiz timing reset - quiz is now due');
+      return true;
+    } catch (error) {
+      console.error('🎓 Error forcing quiz due:', error);
       return false;
     }
   }
