@@ -79,7 +79,12 @@ class FeedbackManager {
     const feedback = this._findFeedbackElement();
     if (feedback) {
       feedback.innerHTML = '';
-      feedback.className = 'feedback-container';
+      // Use setAttribute to avoid SVG element issues
+      if (feedback.setAttribute) {
+        feedback.setAttribute('class', 'feedback-container');
+      } else {
+        feedback.className = 'feedback-container';
+      }
     }
 
     this._clearOverlayMessages();
@@ -96,14 +101,24 @@ class FeedbackManager {
     // Try multiple strategies to find feedback element
     if (this.feedbackElement) return this.feedbackElement;
     
-    return document.getElementById('feedback') || 
-           document.querySelector('.feedback-container') ||
-           document.querySelector('#sat-quiz-modal #feedback');
+    // Only return HTML elements, not SVG elements
+    const candidates = [
+      document.getElementById('feedback'),
+      document.querySelector('.feedback-container'),
+      document.querySelector('#sat-quiz-modal #feedback')
+    ].filter(el => el && el.tagName && el.tagName.toLowerCase() !== 'svg');
+    
+    return candidates[0] || null;
   }
 
   _displayInModal(feedbackElement, message, type) {
     feedbackElement.innerHTML = '';
-    feedbackElement.className = `feedback-container ${type}`;
+    // Use setAttribute to avoid SVG element issues
+    if (feedbackElement.setAttribute) {
+      feedbackElement.setAttribute('class', `feedback-container ${type}`);
+    } else {
+      feedbackElement.className = `feedback-container ${type}`;
+    }
     feedbackElement.textContent = message;
 
     // Fade-in effect
@@ -121,7 +136,12 @@ class FeedbackManager {
 
     // Create message element
     const messageDiv = document.createElement('div');
-    messageDiv.className = `overlay-feedback ${type}`;
+    // Use setAttribute to avoid SVG element issues
+    if (messageDiv.setAttribute) {
+      messageDiv.setAttribute('class', `overlay-feedback ${type}`);
+    } else {
+      messageDiv.className = `overlay-feedback ${type}`;
+    }
     
     messageDiv.innerHTML = `
       <div class="overlay-icon">${this._getTypeIcon(type)}</div>
@@ -189,4 +209,7 @@ class FeedbackManager {
     };
     return titles[type] || titles.info;
   }
-} 
+}
+
+// Make FeedbackManager globally accessible
+window.FeedbackManager = FeedbackManager; 

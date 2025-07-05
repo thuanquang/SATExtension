@@ -159,19 +159,33 @@ class QuizState {
     this.isReviewing = false;
   }
 
-  // Chrome storage helpers
+  // Chrome storage helpers with fallback for testing
   async getStorageData(key) {
-    return new Promise((resolve) => {
-      chrome.storage.local.get([key], (result) => {
-        resolve(result[key]);
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      // Chrome extension context
+      return new Promise((resolve) => {
+        chrome.storage.local.get([key], (result) => {
+          resolve(result[key]);
+        });
       });
-    });
+    } else {
+      // Fallback for testing/non-extension context
+      const value = localStorage.getItem(`sat_quiz_${key}`);
+      return value ? JSON.parse(value) : undefined;
+    }
   }
 
   async setStorageData(key, value) {
-    return new Promise((resolve) => {
-      chrome.storage.local.set({ [key]: value }, resolve);
-    });
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      // Chrome extension context
+      return new Promise((resolve) => {
+        chrome.storage.local.set({ [key]: value }, resolve);
+      });
+    } else {
+      // Fallback for testing/non-extension context
+      localStorage.setItem(`sat_quiz_${key}`, JSON.stringify(value));
+      return Promise.resolve();
+    }
   }
 
   // Validation helpers
@@ -204,4 +218,7 @@ class QuizState {
       maxAttempts: this.maxAttempts
     };
   }
-} 
+}
+
+// Make QuizState globally accessible
+window.QuizState = QuizState; 

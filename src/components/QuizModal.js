@@ -16,7 +16,12 @@ class QuizModal {
       this.overlay = existingOverlay;
     } else {
       this.overlay = document.createElement('div');
-      this.overlay.className = 'quiz-overlay';
+      // Use setAttribute to avoid SVG element issues
+      if (this.overlay.setAttribute) {
+        this.overlay.setAttribute('class', 'quiz-overlay');
+      } else {
+        this.overlay.className = 'quiz-overlay';
+      }
       document.body.appendChild(this.overlay);
     }
     
@@ -30,7 +35,12 @@ class QuizModal {
     // Create modal
     this.modal = document.createElement('div');
     this.modal.id = 'sat-quiz-modal';
-    this.modal.className = 'quiz-modal';
+    // Use setAttribute to avoid SVG element issues
+    if (this.modal.setAttribute) {
+      this.modal.setAttribute('class', 'quiz-modal');
+    } else {
+      this.modal.className = 'quiz-modal';
+    }
     this.modal.setAttribute('tabindex', '-1');
     this.modal.innerHTML = this._generateModalHTML(question);
     this._attachEventListeners();
@@ -329,4 +339,7 @@ class QuizModal {
   setReviewMode(isReviewMode) {
     this.isReviewMode = isReviewMode;
   }
-} 
+}
+
+// Make QuizModal globally accessible
+window.QuizModal = QuizModal; 

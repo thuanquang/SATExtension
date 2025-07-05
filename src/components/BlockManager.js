@@ -79,7 +79,12 @@ class BlockManager {
     
     this.overlay = document.createElement('div');
     this.overlay.id = 'sat-quiz-overlay';
-    this.overlay.className = 'quiz-overlay';
+    // Use setAttribute to avoid SVG element issues
+    if (this.overlay.setAttribute) {
+      this.overlay.setAttribute('class', 'quiz-overlay');
+    } else {
+      this.overlay.className = 'quiz-overlay';
+    }
     
     document.body.appendChild(this.overlay);
   }
@@ -138,4 +143,7 @@ class BlockManager {
       hasModal: !!this.modal
     };
   }
-} 
+}
+
+// Make BlockManager globally accessible
+window.BlockManager = BlockManager; 

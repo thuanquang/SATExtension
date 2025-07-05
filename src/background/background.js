@@ -1,6 +1,6 @@
 // Background service worker for SAT Quiz Blocker
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('SAT Quiz Blocker extension installed');
+  console.log('🎓 SAT Quiz Blocker extension installed');
   
   // Initialize default settings
   chrome.storage.local.set({
@@ -19,6 +19,8 @@ chrome.action.onClicked.addListener((tab) => {
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('🎓 Background received message:', request);
+  
   if (request.action === 'getStats') {
     chrome.storage.local.get(['questionsAnswered', 'totalAttempts', 'lastQuizTime'], (result) => {
       sendResponse({
@@ -56,41 +58,40 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
     return true;
   }
-});
-
-// Handle tab updates to inject content script
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url && (tab.url.startsWith('http://') || tab.url.startsWith('https://'))) {
-    const { extensionEnabled } = await chrome.storage.local.get(['extensionEnabled']);
-    
-    if (extensionEnabled !== false) {
-      console.log('Injecting scripts into tab:', tabId);
-      try {
-        await chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          files: ['src/db/config.js']
-        });
-        await chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          files: ['src/db/supabase-client.js']
-        });
-        await chrome.scripting.executeScript({
-          target: { tabId: tabId },
-          files: ['src/content/content.js']
-        });
-        await chrome.scripting.insertCSS({
-          target: { tabId: tabId },
-          files: ['src/styles/styles.css']
-        });
-        console.log('Scripts injected successfully into tab:', tabId);
-      } catch (err) {
-        console.error('Failed to inject scripts:', err);
+  
+  // Test message to verify background script is working
+  if (request.action === 'testBackground') {
+    console.log('🎓 Background script test successful');
+    sendResponse({ success: true, message: 'Background script is working' });
+    return true;
+  }
+  
+  // Forward forceQuiz messages to content script
+  if (request.action === 'forceQuiz') {
+    chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+      if (tabs[0]) {
+        try {
+          const response = await chrome.tabs.sendMessage(tabs[0].id, { action: 'forceQuiz' });
+          sendResponse(response);
+        } catch (error) {
+          console.error('Failed to send forceQuiz to content script:', error);
+          sendResponse({ 
+            success: false, 
+            error: 'Extension not loaded on this page. Try refreshing and ensure the page is a regular website.' 
+          });
+        }
+      } else {
+        sendResponse({ success: false, error: 'No active tab found' });
       }
-    }
+    });
+    return true;
   }
 });
 
 // Handle extension startup
 chrome.runtime.onStartup.addListener(() => {
   console.log('SAT Quiz Blocker extension started');
-}); 
+});
+
+// Log when background script loads
+console.log('🎓 SAT Quiz Blocker background script loaded'); 

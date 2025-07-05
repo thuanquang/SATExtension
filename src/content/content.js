@@ -3,6 +3,8 @@
 // This script is injected after config.js and supabase-client.js
 // so EXTENSION_CONFIG and SupabaseClient class are available.
 
+import { supabase, getCurrentUserId, ensureAuth } from '../db/supabase-client.js';
+
 class SATQuizBlocker {
   constructor(supabaseClient) {
     this.supabaseClient = supabaseClient;
@@ -944,13 +946,13 @@ try {
   console.log('🎓 SAT Quiz Blocker: Initializing content script...');
   console.log('🎓 SAT Quiz Blocker: Checking if SupabaseClient is available...');
   
-  if (typeof SupabaseClient === 'undefined') {
+  if (typeof supabase === 'undefined') {
     console.error('🎓 SAT Quiz Blocker: SupabaseClient class is not defined!');
     throw new Error('SupabaseClient class not found. Check if supabase-client.js is loaded.');
   }
   
   console.log('🎓 SAT Quiz Blocker: Creating Supabase client...');
-  const supabaseClient = new SupabaseClient();
+  const supabaseClient = supabase;
   console.log('🎓 SAT Quiz Blocker: Supabase client created successfully');
   
   console.log('🎓 SAT Quiz Blocker: Creating quiz blocker instance...');

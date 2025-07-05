@@ -2,11 +2,28 @@
 document.addEventListener('DOMContentLoaded', () => {
   loadStats();
   setupEventListeners();
+  testBackgroundConnection();
 });
+
+async function testBackgroundConnection() {
+  try {
+    const response = await chrome.runtime.sendMessage({ action: 'testBackground' });
+    console.log('✅ Background script connection test:', response);
+  } catch (error) {
+    console.error('❌ Background script connection failed:', error);
+  }
+}
 
 async function loadStats() {
   try {
+    // Test if we can communicate with background script
+    await testBackgroundConnection();
+    
+    // Load basic stats
     const response = await chrome.runtime.sendMessage({ action: 'getStats' });
+    
+    // Load gamification data
+    const gamificationResponse = await chrome.runtime.sendMessage({ action: 'getGamificationStats' });
     
     if (response) {
       document.getElementById('questions-answered').textContent = response.questionsAnswered;
@@ -49,6 +66,14 @@ async function loadStats() {
         forceQuizBtn.title = 'Take your first quiz now';
       }
     }
+
+    // Display gamification data
+    if (gamificationResponse && gamificationResponse.success) {
+      displayGamificationStats(gamificationResponse);
+    } else {
+      console.warn('Gamification stats not available:', gamificationResponse);
+    }
+    
   } catch (error) {
     console.error('Error loading stats:', error);
     showNotification('Error loading quiz statistics', 'error');
@@ -98,24 +123,10 @@ function setupEventListeners() {
       forceQuizBtn.textContent = '⏳ Loading...';
       forceQuizBtn.disabled = true;
       
-      // Get the current active tab
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      console.log('Sending force quiz message to background script');
       
-      if (!tab) {
-        showNotification('No active tab found. Please select a tab with a webpage.', 'error');
-        return;
-      }
-      
-      // Check if tab URL is valid for content scripts
-      if (tab.url.startsWith('chrome://') || tab.url.startsWith('chrome-extension://') || tab.url.startsWith('edge://') || tab.url.startsWith('about:')) {
-        showNotification('Quiz cannot run on browser internal pages. Please navigate to a regular website.', 'error');
-        return;
-      }
-      
-      console.log('Sending force quiz message to tab:', tab.id);
-      
-      // Send message to content script
-      const response = await chrome.tabs.sendMessage(tab.id, { 
+      // Send message to background script, which will forward to content script
+      const response = await chrome.runtime.sendMessage({ 
         action: 'forceQuiz',
         timestamp: Date.now() // Add timestamp to ensure unique message
       });
@@ -167,6 +178,82 @@ function updateToggleState(enabled) {
     statusIndicator.classList.add('active');
   } else {
     statusIndicator.classList.remove('active');
+  }
+}
+
+function displayGamificationStats(gamificationData) {
+  try {
+    const { xp, badges, streaks } = gamificationData;
+    
+    // Update XP and Level
+    if (xp) {
+      updateXPDisplay(xp);
+    }
+    
+    // Update Streaks
+    if (streaks) {
+      updateStreakDisplay(streaks);
+    }
+    
+    // Update Badges
+    if (badges) {
+      updateBadgeDisplay(badges);
+    }
+    
+  } catch (error) {
+    console.error('Error displaying gamification stats:', error);
+  }
+}
+
+function updateXPDisplay(xpData) {
+  const xpElement = document.getElementById('current-xp');
+  const levelElement = document.getElementById('current-level');
+  const progressElement = document.getElementById('xp-progress');
+  const progressBarElement = document.getElementById('xp-progress-bar');
+  
+  if (xpElement) xpElement.textContent = (xpData.totalXP || 0).toLocaleString();
+  if (levelElement) levelElement.textContent = xpData.currentLevel || 1;
+  
+  if (progressElement && xpData.progressXP !== undefined && xpData.requiredXP !== undefined) {
+    progressElement.textContent = `${xpData.progressXP}/${xpData.requiredXP} XP to Level ${(xpData.currentLevel || 1) + 1}`;
+  }
+  
+  if (progressBarElement && xpData.progressPercentage !== undefined) {
+    progressBarElement.style.width = `${Math.min(100, Math.max(0, xpData.progressPercentage))}%`;
+  }
+}
+
+function updateStreakDisplay(streakData) {
+  const correctStreakElement = document.getElementById('correct-streak');
+  const dailyStreakElement = document.getElementById('daily-streak');
+  const streakMultiplierElement = document.getElementById('streak-multiplier');
+  
+  if (correctStreakElement && streakData.correctAnswers) {
+    correctStreakElement.textContent = streakData.correctAnswers.current || 0;
+  }
+  
+  if (dailyStreakElement && streakData.dailyParticipation) {
+    dailyStreakElement.textContent = streakData.dailyParticipation.current || 0;
+  }
+  
+  if (streakMultiplierElement && streakData.correctAnswers) {
+    const multiplier = streakData.correctAnswers.multiplier || 1;
+    streakMultiplierElement.textContent = multiplier > 1 ? `${multiplier}x XP` : 'No bonus';
+    streakMultiplierElement.className = multiplier > 1 ? 'streak-multiplier active' : 'streak-multiplier';
+  }
+}
+
+function updateBadgeDisplay(badgeData) {
+  const badgesEarnedElement = document.getElementById('badges-earned');
+  const badgesTotalElement = document.getElementById('badges-total');
+  const badgeProgressElement = document.getElementById('badge-progress');
+  
+  if (badgesEarnedElement) badgesEarnedElement.textContent = badgeData.earnedBadges || 0;
+  if (badgesTotalElement) badgesTotalElement.textContent = badgeData.totalBadges || 0;
+  
+  if (badgeProgressElement && badgeData.totalBadges > 0) {
+    const percentage = ((badgeData.earnedBadges || 0) / badgeData.totalBadges) * 100;
+    badgeProgressElement.textContent = `${Math.round(percentage)}% complete`;
   }
 }
 

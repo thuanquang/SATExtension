@@ -20,12 +20,19 @@ SATExtension/
 │   │   ├── QuizModal.js        # Quiz modal UI component
 │   │   └── QuizState.js        # State management for quiz data
 │   ├── controller/             # Orchestration logic
-│   │   └── QuizController.js   # Main controller (MVC pattern)
+│   │   └── QuizController.js   # Main controller (MVC pattern) - Enhanced with gamification
 │   ├── db/                     # Database and API logic
 │   │   ├── supabase-client.js  # Supabase API client
 │   │   └── config.js           # Configuration and constants
+│   ├── systems/                # 🎮 GAMIFICATION SYSTEMS (NEW)
+│   │   ├── XPManager.js        # Experience points and leveling system
+│   │   ├── BadgeManager.js     # Badge definitions and achievement tracking
+│   │   ├── StreakManager.js    # Streak tracking and momentum features
+│   │   ├── ChallengeEngine.js  # Daily challenges and themed events
+│   │   ├── CustomizationManager.js # Themes, avatars, and interface personalization
+│   │   └── ProgressDashboard.js # Comprehensive progress visualization and analytics
 │   └── styles/                 # Global styles
-│       └── styles.css          # Main stylesheet
+│       └── styles.css          # Main stylesheet (Enhanced with gamification styles)
 │
 ├── assets/                     # Images, icons, fonts, etc.
 ├── sql/                        # SQL scripts and database setup
@@ -35,6 +42,7 @@ SATExtension/
 │   ├── README.md               # Main project documentation
 │   ├── STRUCTURE.md            # This file - project structure
 │   ├── EXTENSION_FUNCTIONALITY.md # Detailed functionality docs
+│   ├── COMPREHENSIVE_GAMIFICATION_STRATEGY.md # Complete gamification analysis and implementation strategy
 │   ├── BLANK_OPTIONS_ANALYSIS.md # Analysis of blank options issue
 │   └── BLANK_OPTIONS_FIX_SUMMARY.md # Summary of fixes applied
 ├── test/                       # Test HTML files and debug scripts
@@ -138,6 +146,56 @@ SATExtension/
   - Handle API authentication
   - Manage data formatting
   - Error handling for network issues
+
+## 🎮 Gamification Systems (NEW)
+
+### XPManager (src/systems/)
+- **Purpose**: Experience points and leveling system
+- **Responsibilities**:
+  - Calculate XP based on difficulty, attempts, and speed
+  - Apply streak multipliers (up to 2.5x)
+  - Manage level progression with escalating requirements
+  - Award bonus XP for achievements and milestones
+
+### BadgeManager (src/systems/)
+- **Purpose**: Badge definitions and achievement tracking
+- **Responsibilities**:
+  - Define 30+ badges across 4 categories (subject, difficulty, consistency, special)
+  - Track progress towards badge requirements
+  - Award badges automatically when criteria are met
+  - Provide visual representations and progress indicators
+
+### StreakManager (src/systems/)
+- **Purpose**: Streak tracking and momentum features
+- **Responsibilities**:
+  - Track correct answer streaks with XP multipliers
+  - Monitor daily participation streaks
+  - Generate motivational messages based on performance
+  - Handle streak breaking and comeback mechanics
+
+### ChallengeEngine (src/systems/)
+- **Purpose**: Daily challenges and themed events
+- **Responsibilities**:
+  - Generate themed daily challenges (Math Monday, Word Wednesday, etc.)
+  - Scale difficulty based on user level (beginner to expert)
+  - Track challenge progress and completion
+  - Award bonus rewards for challenge completion
+
+### CustomizationManager (src/systems/)
+- **Purpose**: Themes, avatars, and interface personalization
+- **Responsibilities**:
+  - Manage 8 unlockable themes with level requirements
+  - Handle avatar system (15 animals, 14 colors, 6 accessories, 3 poses)
+  - Apply customizations to quiz interface
+  - Track unlock progress and available options
+
+### ProgressDashboard (src/systems/)
+- **Purpose**: Comprehensive progress visualization and analytics
+- **Responsibilities**:
+  - Create multi-dimensional analytics dashboards
+  - Generate visual progress charts and graphs
+  - Display achievement timelines and milestone celebrations
+  - Provide comprehensive statistics and trends
 
 ## 🚀 Deployment Considerations
 

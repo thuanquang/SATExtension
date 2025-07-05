@@ -471,8 +471,7 @@
                     };
                 }
                 
-                const supabaseClient = new SupabaseClient();
-                const controller = new QuizController(supabaseClient);
+                const controller = new QuizController();
                 
                 if (controller.state && controller.modal && controller.feedback && controller.blockManager) {
                     log('component', '✅ QuizController: Component initialization works');

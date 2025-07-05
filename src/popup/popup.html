@@ -17,7 +17,7 @@
   </div>
 
   <div class="popup-card">
-    <h3 class="popup-card-title">Your Progress</h3>
+    <h3 class="popup-card-title">📊 Your Progress</h3>
     <div class="stat-item">
       <span class="stat-label">Questions Answered</span>
       <span class="stat-value" id="questions-answered">0</span>
@@ -29,6 +29,54 @@
     <div class="stat-item">
       <span class="stat-label">Last Quiz</span>
       <span class="stat-value" id="last-quiz">Never</span>
+    </div>
+  </div>
+
+  <div class="popup-card gamification-card">
+    <h3 class="popup-card-title">⭐ Level & XP</h3>
+    <div class="level-display">
+      <div class="level-badge">
+        <span class="level-number" id="current-level">1</span>
+        <span class="level-label">Level</span>
+      </div>
+      <div class="xp-info">
+        <div class="xp-total"><span id="current-xp">0</span> XP</div>
+        <div class="xp-progress-container">
+          <div class="xp-progress-bar-container">
+            <div class="xp-progress-bar" id="xp-progress-bar" style="width: 0%"></div>
+          </div>
+          <div class="xp-progress-text" id="xp-progress">0/100 XP to Level 2</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup-card gamification-card">
+    <h3 class="popup-card-title">🔥 Streaks & Momentum</h3>
+    <div class="streak-display">
+      <div class="streak-item">
+        <span class="streak-label">Correct Answers</span>
+        <span class="streak-value" id="correct-streak">0</span>
+        <span class="streak-multiplier" id="streak-multiplier">No bonus</span>
+      </div>
+      <div class="streak-item">
+        <span class="streak-label">Daily Learning</span>
+        <span class="streak-value" id="daily-streak">0</span>
+        <span class="streak-unit">days</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup-card gamification-card">
+    <h3 class="popup-card-title">🏆 Badges & Achievements</h3>
+    <div class="badge-summary">
+      <div class="badge-count">
+        <span class="badge-earned" id="badges-earned">0</span>
+        <span class="badge-separator">/</span>
+        <span class="badge-total" id="badges-total">0</span>
+        <span class="badge-label">earned</span>
+      </div>
+      <div class="badge-progress" id="badge-progress">0% complete</div>
     </div>
   </div>
 

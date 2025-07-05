@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT Quiz Extension Test</title>
+    <link rel="stylesheet" href="src/styles/styles.css">
+</head>
+<body>
+    <h1>SAT Quiz Extension Test</h1>
+    <p>Open the console to see the loading status.</p>
+    
+    <button onclick="testDependencies()">Test Dependencies</button>
+    <button onclick="testQuizController()">Test Quiz Controller</button>
+    <button onclick="forceQuiz()">Force Quiz</button>
+    <button onclick="checkErrors()">Check Script Errors</button>
+    <button onclick="testIndividualComponents()">Test Individual Components</button>
+    <button onclick="debugClassAvailability()">Debug Class Availability</button>
+    
+    <div id="test-results"></div>
+
+    <script>
+        // Track script loading errors
+        window.scriptErrors = [];
+        window.addEventListener('error', function(e) {
+            console.error('Script error:', e);
+            window.scriptErrors.push({
+                file: e.filename,
+                line: e.lineno,
+                message: e.message,
+                error: e.error
+            });
+        });
+        
+        console.log('🧪 Starting manual test...');
+        
+        function debugClassAvailability() {
+            const results = document.getElementById('test-results');
+            let html = '<h3>Debug Class Availability:</h3>';
+            
+            // Check different ways to access the classes
+            const checks = [
+                { name: 'window.QuizState', value: window.QuizState },
+                { name: 'QuizState (global)', value: typeof QuizState !== 'undefined' ? QuizState : undefined },
+                { name: 'this.QuizState', value: this.QuizState },
+                { name: 'globalThis.QuizState', value: globalThis.QuizState }
+            ];
+            
+            checks.forEach(check => {
+                html += `<div><strong>${check.name}:</strong> ${check.value ? '✅ Found' : '❌ Not found'}</div>`;
+                if (check.value) {
+                    html += `<div style="margin-left: 20px; font-size: 12px;">Type: ${typeof check.value}</div>`;
+                }
+            });
+            
+            // Check what's actually in the global scope
+            html += '<h4>Global Objects Starting with "Quiz":</h4>';
+            const globalKeys = Object.keys(window).filter(key => key.startsWith('Quiz'));
+            if (globalKeys.length > 0) {
+                globalKeys.forEach(key => {
+                    html += `<div>window.${key}: ${typeof window[key]}</div>`;
+                });
+            } else {
+                html += '<div>No objects starting with "Quiz" found in window</div>';
+            }
+            
+            results.innerHTML = html;
+        }
+    </script>
+
+    <!-- Load scripts in the same order as the extension -->
+    <script src="src/db/config.js" onerror="console.error('Failed to load config.js')"></script>
+    <script>console.log('✅ Config loaded, EXTENSION_CONFIG:', typeof EXTENSION_CONFIG);</script>
+    
+    <script src="src/db/supabase-client.js" onerror="console.error('Failed to load supabase-client.js')"></script>
+    <script>console.log('✅ Supabase client loaded, getRandomQuestion:', typeof window.getRandomQuestion);</script>
+    
+    <script src="src/components/QuizState.js" onerror="console.error('Failed to load QuizState.js')"></script>
+    <script>console.log('✅ QuizState script loaded, QuizState class:', typeof QuizState, typeof window.QuizState);</script>
+    
+    <script src="src/components/FeedbackManager.js" onerror="console.error('Failed to load FeedbackManager.js')"></script>
+    <script>console.log('✅ FeedbackManager script loaded, FeedbackManager class:', typeof FeedbackManager, typeof window.FeedbackManager);</script>
+    
+    <script src="src/components/QuizModal.js" onerror="console.error('Failed to load QuizModal.js')"></script>
+    <script>console.log('✅ QuizModal script loaded, QuizModal class:', typeof QuizModal, typeof window.QuizModal);</script>
+    
+    <script src="src/components/BlockManager.js" onerror="console.error('Failed to load BlockManager.js')"></script>
+    <script>console.log('✅ BlockManager script loaded, BlockManager class:', typeof BlockManager, typeof window.BlockManager);</script>
+    
+    <script src="src/controller/QuizController.js" onerror="console.error('Failed to load QuizController.js')"></script>
+    <script>console.log('✅ QuizController script loaded, QuizController class:', typeof QuizController, typeof window.QuizController);</script>
+    
+    <script>
+        function testIndividualComponents() {
+            const results = document.getElementById('test-results');
+            let html = '<h3>Individual Component Tests:</h3>';
+            
+            // Test each component individually
+            const components = [
+                { name: 'QuizState', class: window.QuizState },
+                { name: 'FeedbackManager', class: window.FeedbackManager },
+                { name: 'QuizModal', class: window.QuizModal },
+                { name: 'BlockManager', class: window.BlockManager },
+                { name: 'QuizController', class: window.QuizController }
+            ];
+            
+            components.forEach(component => {
+                html += `<div style="margin: 10px 0; padding: 10px; border: 1px solid #ccc;">`;
+                html += `<strong>${component.name}:</strong> `;
+                
+                if (typeof component.class !== 'undefined') {
+                    html += `<span style="color: green;">✅ Class defined</span><br>`;
+                    
+                    try {
+                        const instance = new component.class();
+                        html += `<span style="color: green;">✅ Can instantiate</span><br>`;
+                        html += `<small>Methods: ${Object.getOwnPropertyNames(Object.getPrototypeOf(instance)).filter(n => n !== 'constructor').join(', ')}</small>`;
+                    } catch (error) {
+                        html += `<span style="color: red;">❌ Cannot instantiate: ${error.message}</span>`;
+                    }
+                } else {
+                    html += `<span style="color: red;">❌ Class not defined</span>`;
+                }
+                
+                html += `</div>`;
+            });
+            
+            results.innerHTML = html;
+        }
+        
+        function testDependencies() {
+            const results = document.getElementById('test-results');
+            const deps = {
+                EXTENSION_CONFIG: typeof EXTENSION_CONFIG !== 'undefined',
+                SUPABASE_CONFIG: typeof SUPABASE_CONFIG !== 'undefined',
+                getRandomQuestion: typeof window.getRandomQuestion !== 'undefined',
+                QuizModal: typeof window.QuizModal !== 'undefined',
+                FeedbackManager: typeof window.FeedbackManager !== 'undefined',
+                QuizState: typeof window.QuizState !== 'undefined',
+                BlockManager: typeof window.BlockManager !== 'undefined',
+                QuizController: typeof window.QuizController !== 'undefined'
+            };
+            
+            console.log('🔍 Dependency test results:', deps);
+            
+            let html = '<h3>Dependency Test Results:</h3><ul>';
+            for (const [dep, loaded] of Object.entries(deps)) {
+                html += `<li style="color: ${loaded ? 'green' : 'red'}">${dep}: ${loaded ? '✅ Loaded' : '❌ Missing'}</li>`;
+            }
+            html += '</ul>';
+            
+            // Show script errors if any
+            if (window.scriptErrors.length > 0) {
+                html += '<h3 style="color: red;">Script Loading Errors:</h3><ul>';
+                window.scriptErrors.forEach(error => {
+                    html += `<li style="color: red; font-size: 12px;">
+                        <strong>${error.file}:${error.line}</strong><br>
+                        ${error.message}
+                    </li>`;
+                });
+                html += '</ul>';
+            }
+            
+            results.innerHTML = html;
+        }
+        
+        function checkErrors() {
+            const results = document.getElementById('test-results');
+            
+            if (window.scriptErrors.length === 0) {
+                results.innerHTML = '<p style="color: green;">✅ No script loading errors detected!</p>';
+            } else {
+                let html = '<h3 style="color: red;">Script Errors Detected:</h3><ul>';
+                window.scriptErrors.forEach((error, index) => {
+                    html += `<li style="color: red; margin-bottom: 10px;">
+                        <strong>Error ${index + 1}:</strong><br>
+                        <strong>File:</strong> ${error.file}<br>
+                        <strong>Line:</strong> ${error.line}<br>
+                        <strong>Message:</strong> ${error.message}<br>
+                        ${error.error ? `<strong>Details:</strong> ${error.error.toString()}` : ''}
+                    </li>`;
+                });
+                html += '</ul>';
+                results.innerHTML = html;
+            }
+            
+            console.log('Script errors:', window.scriptErrors);
+        }
+        
+        function testQuizController() {
+            try {
+                if (typeof QuizController === 'undefined') {
+                    throw new Error('QuizController class is not defined');
+                }
+                
+                const controller = new QuizController();
+                console.log('✅ QuizController created successfully:', controller);
+                document.getElementById('test-results').innerHTML += '<p style="color: green;">✅ QuizController created successfully!</p>';
+            } catch (error) {
+                console.error('❌ QuizController creation failed:', error);
+                document.getElementById('test-results').innerHTML += `<p style="color: red;">❌ QuizController creation failed: ${error.message}</p>`;
+            }
+        }
+        
+        async function forceQuiz() {
+            try {
+                if (typeof QuizController === 'undefined') {
+                    throw new Error('QuizController class is not defined');
+                }
+                
+                const controller = new QuizController();
+                await controller.init();
+                await controller.forceQuiz();
+                console.log('✅ Quiz forced successfully');
+                document.getElementById('test-results').innerHTML += '<p style="color: green;">✅ Quiz forced successfully!</p>';
+            } catch (error) {
+                console.error('❌ Force quiz failed:', error);
+                document.getElementById('test-results').innerHTML += `<p style="color: red;">❌ Force quiz failed: ${error.message}</p>`;
+            }
+        }
+        
+        // Auto-test on load with delay to ensure all scripts are loaded
+        setTimeout(() => {
+            console.log('🧪 Auto-testing dependencies...');
+            testDependencies();
+        }, 500);
+    </script>
+</body>
+</html> 
