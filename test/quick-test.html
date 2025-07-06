@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Extension Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 40px;
+            line-height: 1.6;
+            background: #f8f9fa;
+        }
+        .test-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 8px 8px 8px 0;
+            font-size: 14px;
+        }
+        .test-btn:hover {
+            background: #0056b3;
+        }
+        .results {
+            background: #000;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 16px;
+        }
+        .status {
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+        }
+        .status.good { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.bad { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    </style>
+</head>
+<body>
+    <h1>🎓 Quick Extension Test</h1>
+    <p>Simple test to verify the SAT Quiz Extension is working.</p>
+
+    <div id="status" class="status warning">
+        <strong>Status:</strong> <span id="status-text">Checking...</span>
+    </div>
+
+    <div>
+        <button class="test-btn" onclick="checkExtension()">🔍 Check Extension</button>
+        <button class="test-btn" onclick="testDependencies()">📦 Test Dependencies</button>
+        <button class="test-btn" onclick="forceQuiz()">🎯 Force Quiz</button>
+        <button class="test-btn" onclick="checkGameSystems()">🎮 Check Gamification</button>
+        <button class="test-btn" onclick="clearLog()">🗑️ Clear Log</button>
+    </div>
+
+    <div class="results" id="results">Test results will appear here...\n</div>
+
+    <script>
+        // Simple logging function
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const resultsElement = document.getElementById('results');
+            
+            const colors = {
+                info: '#00ff00',
+                success: '#00ff88',
+                error: '#ff4444',
+                warning: '#ffff00'
+            };
+            
+            const color = colors[type] || '#00ff00';
+            resultsElement.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            resultsElement.scrollTop = resultsElement.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearLog() {
+            document.getElementById('results').innerHTML = 'Log cleared...\n';
+        }
+
+        function setStatus(message, type = 'warning') {
+            const statusDiv = document.getElementById('status');
+            const statusText = document.getElementById('status-text');
+            
+            statusDiv.className = `status ${type}`;
+            statusText.textContent = message;
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', () => {
+            setTimeout(checkExtension, 1000);
+        });
+
+        function checkExtension() {
+            log('🔍 Checking extension status...', 'info');
+            
+            try {
+                // Check if extension loaded notification appeared
+                const hasNotification = document.querySelector('[style*="SAT Quiz Extension Loaded"]') !== null;
+                if (hasNotification) {
+                    log('✅ Extension loaded notification found', 'success');
+                    setStatus('Extension is working!', 'good');
+                } else {
+                    log('⚠️ No load notification found', 'warning');
+                }
+
+                // Check for debug helpers
+                if (typeof window.debugQuiz !== 'undefined') {
+                    log('✅ Debug interface available', 'success');
+                    setStatus('Extension is working with debug tools!', 'good');
+                } else {
+                    log('⚠️ Debug interface not found', 'warning');
+                }
+
+                // Check for controller
+                if (typeof window.quizController !== 'undefined') {
+                    log('✅ Quiz controller available globally', 'success');
+                } else if (typeof window.QuizController !== 'undefined') {
+                    log('✅ QuizController class available', 'success');
+                } else {
+                    log('❌ No quiz controller found', 'error');
+                    setStatus('Extension may not be loaded properly', 'bad');
+                }
+
+                // Check for extension messages in console
+                const hasExtensionMessages = console.log.toString().includes('🎓') || true; // Always true for simplicity
+                log('ℹ️ Check browser console for 🎓 messages to verify loading', 'info');
+
+            } catch (error) {
+                log(`❌ Error checking extension: ${error.message}`, 'error');
+                setStatus('Error checking extension', 'bad');
+            }
+        }
+
+        function testDependencies() {
+            log('📦 Testing dependencies...', 'info');
+            
+            const dependencies = [
+                'EXTENSION_CONFIG',
+                'getRandomQuestion', 
+                'QuizController',
+                'QuizState',
+                'QuizModal',
+                'FeedbackManager',
+                'BlockManager',
+                'XPManager',
+                'BadgeManager',
+                'StreakManager'
+            ];
+
+            let loaded = 0;
+            dependencies.forEach(dep => {
+                const available = typeof window[dep] !== 'undefined';
+                if (available) loaded++;
+                log(`${available ? '✅' : '❌'} ${dep}: ${available ? 'Available' : 'Missing'}`, 
+                    available ? 'success' : 'error');
+            });
+
+            log(`📊 Dependencies: ${loaded}/${dependencies.length} loaded`, loaded === dependencies.length ? 'success' : 'warning');
+
+            // Test debug function if available
+            if (typeof window.debugQuiz !== 'undefined') {
+                try {
+                    const deps = window.debugQuiz.checkDependencies();
+                    log('🔧 Debug dependency check completed', 'success');
+                } catch (error) {
+                    log(`⚠️ Debug dependency check failed: ${error.message}`, 'warning');
+                }
+            }
+        }
+
+        async function forceQuiz() {
+            log('🎯 Attempting to force quiz...', 'info');
+            
+            try {
+                // Method 1: Try debug interface
+                if (typeof window.debugQuiz !== 'undefined') {
+                    log('🔧 Using debug interface...', 'info');
+                    await window.debugQuiz.forceQuiz();
+                    log('✅ Quiz forced via debug interface', 'success');
+                    return;
+                }
+
+                // Method 2: Try global controller
+                if (typeof window.quizController !== 'undefined') {
+                    log('🎮 Using global controller...', 'info');
+                    await window.quizController.forceQuiz();
+                    log('✅ Quiz forced via global controller', 'success');
+                    return;
+                }
+
+                // Method 3: Try QuizController class
+                if (typeof window.QuizController !== 'undefined') {
+                    log('🏗️ Using QuizController class...', 'info');
+                    const controller = window.QuizController.getInstance();
+                    if (controller) {
+                        await controller.forceQuiz();
+                        log('✅ Quiz forced via QuizController instance', 'success');
+                        return;
+                    }
+                }
+
+                log('❌ No working method found to force quiz', 'error');
+
+            } catch (error) {
+                log(`❌ Force quiz failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkGameSystems() {
+            log('🎮 Checking gamification systems...', 'info');
+            
+            try {
+                // Check for controller with gamification
+                if (typeof window.quizController !== 'undefined' && window.quizController.getGamificationSummary) {
+                    const stats = await window.quizController.getGamificationSummary();
+                    log('📊 Gamification summary:', 'info');
+                    log(`⭐ XP: ${stats.xp?.current || 0}, Level: ${stats.xp?.level || 1}`, 'success');
+                    log(`🔥 Streak: ${stats.streaks?.current || 0}`, 'success');
+                    log(`🏆 Badges: ${stats.badges?.earned || 0}/${stats.badges?.total || 0}`, 'success');
+                    return;
+                }
+
+                // Check individual systems
+                const systems = ['XPManager', 'BadgeManager', 'StreakManager', 'ChallengeEngine'];
+                let available = 0;
+                
+                systems.forEach(system => {
+                    const exists = typeof window[system] !== 'undefined';
+                    if (exists) available++;
+                    log(`${exists ? '✅' : '❌'} ${system}`, exists ? 'success' : 'error');
+                });
+
+                log(`🎮 Gamification systems: ${available}/${systems.length} available`, 
+                    available > 0 ? 'success' : 'error');
+
+            } catch (error) {
+                log(`❌ Gamification check failed: ${error.message}`, 'error');
+            }
+        }
+
+        // Watch for extension notifications
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1 && node.innerHTML && 
+                        node.innerHTML.includes('SAT Quiz Extension')) {
+                        log('🎉 Extension notification detected!', 'success');
+                        setStatus('Extension loaded successfully!', 'good');
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+    </script>
+</body>
+</html> 

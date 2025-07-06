@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT Quiz Extension - Refactored Architecture Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 40px;
+            line-height: 1.6;
+            background: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .section {
+            background: white;
+            padding: 24px;
+            margin: 20px 0;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .test-card {
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .test-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 8px 8px 8px 0;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .test-btn:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        .test-btn.success {
+            background: #28a745;
+        }
+        .test-btn.error {
+            background: #dc3545;
+        }
+        .test-btn.warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        .results {
+            background: #000;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 16px;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-loading { background: #ffc107; }
+        .status-success { background: #28a745; }
+        .status-error { background: #dc3545; }
+        .status-warning { background: #fd7e14; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .stat-card {
+            background: #e3f2fd;
+            padding: 16px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1976d2;
+            margin-bottom: 4px;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        h1 { color: #333; margin-bottom: 8px; }
+        h2 { color: #555; margin-bottom: 16px; }
+        h3 { color: #666; margin-bottom: 12px; }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #007bff;
+            color: white;
+            border-radius: 4px;
+            font-size: 11px;
+            margin: 2px;
+        }
+        .badge.success { background: #28a745; }
+        .badge.error { background: #dc3545; }
+        .badge.warning { background: #ffc107; color: #212529; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 SAT Quiz Extension - Refactored Architecture Test</h1>
+        <p>Comprehensive testing suite for the new ExtensionCore-based architecture with full gamification integration.</p>
+
+        <div class="section">
+            <h2>📊 Extension Status</h2>
+            <div id="extension-status">
+                <span class="status-indicator status-loading"></span>
+                <span>Checking extension status...</span>
+            </div>
+            <div class="test-grid">
+                <div class="test-card">
+                    <h3>Core Systems</h3>
+                    <div id="core-systems-status">Loading...</div>
+                </div>
+                <div class="test-card">
+                    <h3>Gamification Systems</h3>
+                    <div id="gamification-systems-status">Loading...</div>
+                </div>
+                <div class="test-card">
+                    <h3>Database Connection</h3>
+                    <div id="database-status">Loading...</div>
+                </div>
+                <div class="test-card">
+                    <h3>User Session</h3>
+                    <div id="user-session-status">Loading...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🧪 Core Tests</h2>
+            <button class="test-btn" onclick="runFullDiagnostic()">🔍 Full Diagnostic</button>
+            <button class="test-btn" onclick="testExtensionCore()">🏗️ Test Extension Core</button>
+            <button class="test-btn" onclick="testDependencies()">📦 Test Dependencies</button>
+            <button class="test-btn" onclick="testInitialization()">⚡ Test Initialization</button>
+            <button class="test-btn" onclick="clearResults()">🗑️ Clear Results</button>
+        </div>
+
+        <div class="section">
+            <h2>🎮 Gamification Tests</h2>
+            <button class="test-btn" onclick="testXPSystem()">⭐ Test XP System</button>
+            <button class="test-btn" onclick="testStreakSystem()">🔥 Test Streak System</button>
+            <button class="test-btn" onclick="testBadgeSystem()">🏆 Test Badge System</button>
+            <button class="test-btn" onclick="testChallengeSystem()">🎯 Test Challenge System</button>
+            <button class="test-btn" onclick="testAllGamification()">🚀 Test All Gamification</button>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Quiz Tests</h2>
+            <button class="test-btn" onclick="testQuizFlow()">📝 Test Quiz Flow</button>
+            <button class="test-btn" onclick="forceQuiz()">⚡ Force Quiz</button>
+            <button class="test-btn" onclick="simulateCorrectAnswer()">✅ Simulate Correct</button>
+            <button class="test-btn" onclick="simulateIncorrectAnswer()">❌ Simulate Incorrect</button>
+            <button class="test-btn" onclick="testQuizRewards()">🎁 Test Quiz Rewards</button>
+        </div>
+
+        <div class="section">
+            <h2>📱 Popup Integration Tests</h2>
+            <button class="test-btn" onclick="testPopupCommunication()">📡 Test Popup Communication</button>
+            <button class="test-btn" onclick="testStatsRetrieval()">📊 Test Stats Retrieval</button>
+            <button class="test-btn" onclick="testResetStats()">🔄 Test Reset Stats</button>
+        </div>
+
+        <div class="section">
+            <h2>📈 Current Statistics</h2>
+            <div class="stats-grid" id="current-stats">
+                <div class="stat-card">
+                    <div class="stat-value" id="current-xp">-</div>
+                    <div class="stat-label">Current XP</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="current-level">-</div>
+                    <div class="stat-label">Level</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="current-streak">-</div>
+                    <div class="stat-label">Streak</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="badges-earned">-</div>
+                    <div class="stat-label">Badges</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="questions-answered">-</div>
+                    <div class="stat-label">Questions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-attempts">-</div>
+                    <div class="stat-label">Attempts</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📝 Test Results</h2>
+            <div class="results" id="test-results">Test results will appear here...\n</div>
+        </div>
+
+        <div class="section">
+            <h2>🔧 Debug Tools</h2>
+            <p>Open browser console and use these debug commands:</p>
+            <code>
+                debugSATQuiz.status() - Get extension status<br>
+                debugSATQuiz.checkDependencies() - Check all dependencies<br>
+                debugSATQuiz.getCore() - Get ExtensionCore instance<br>
+                debugSATQuiz.getSystems() - List available systems<br>
+                debugSATQuiz.forceQuiz() - Force a quiz<br>
+                debugSATQuiz.getStats() - Get current stats
+            </code>
+        </div>
+    </div>
+
+    <script>
+        // Global test state
+        let testResults = [];
+        let extensionCore = null;
+
+        // Initialize test page
+        window.addEventListener('load', () => {
+            log('🎓 Test page loaded, initializing...');
+            setTimeout(checkExtensionStatus, 1000);
+            setTimeout(loadCurrentStats, 2000);
+        });
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const resultsElement = document.getElementById('test-results');
+            
+            const colors = {
+                info: '#00ff00',
+                success: '#00ff88',
+                error: '#ff4444',
+                warning: '#ffff00',
+                debug: '#88ccff'
+            };
+            
+            const color = colors[type] || '#00ff00';
+            resultsElement.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            resultsElement.scrollTop = resultsElement.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearResults() {
+            document.getElementById('test-results').innerHTML = 'Test results cleared...\n';
+            testResults = [];
+        }
+
+        async function checkExtensionStatus() {
+            log('🔍 Checking extension status...', 'info');
+            
+            try {
+                // Check if extension is initialized
+                const initialized = window.SATQuizExtensionInitialized;
+                updateStatus('extension-status', initialized, 
+                    initialized ? 'Extension initialized successfully' : 'Extension not initialized');
+
+                // Check for ExtensionCore
+                extensionCore = window.satQuizExtension || window.ExtensionCore?.getInstance?.();
+                
+                if (extensionCore) {
+                    log('✅ ExtensionCore found', 'success');
+                    await checkCoreSystems();
+                    await checkGamificationSystems();
+                    await checkDatabaseConnection();
+                    await checkUserSession();
+                } else {
+                    log('❌ ExtensionCore not found', 'error');
+                    updateAllStatusCards(false);
+                }
+
+            } catch (error) {
+                log(`❌ Error checking extension status: ${error.message}`, 'error');
+                updateAllStatusCards(false);
+            }
+        }
+
+        async function checkCoreSystems() {
+            try {
+                const coreSystemsNeeded = ['QuizState', 'QuizModal', 'FeedbackManager', 'BlockManager'];
+                const availableSystems = extensionCore.getAvailableSystems();
+                
+                let coreSystemsStatus = '';
+                let allCorePresent = true;
+
+                coreSystemsNeeded.forEach(system => {
+                    const present = availableSystems.includes(system);
+                    if (!present) allCorePresent = false;
+                    coreSystemsStatus += `<span class="badge ${present ? 'success' : 'error'}">${system}</span>`;
+                });
+
+                document.getElementById('core-systems-status').innerHTML = coreSystemsStatus;
+                log(`Core systems check: ${allCorePresent ? 'All present' : 'Some missing'}`, 
+                    allCorePresent ? 'success' : 'warning');
+
+            } catch (error) {
+                document.getElementById('core-systems-status').innerHTML = '<span class="badge error">Error</span>';
+                log(`❌ Core systems check failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkGamificationSystems() {
+            try {
+                const gamificationSystems = ['XPManager', 'BadgeManager', 'StreakManager', 'ChallengeEngine', 'ProgressDashboard', 'CustomizationManager'];
+                const availableSystems = extensionCore.getAvailableSystems();
+                
+                let gamificationStatus = '';
+                let systemCount = 0;
+
+                gamificationSystems.forEach(system => {
+                    const present = availableSystems.includes(system);
+                    if (present) systemCount++;
+                    gamificationStatus += `<span class="badge ${present ? 'success' : 'warning'}">${system}</span>`;
+                });
+
+                document.getElementById('gamification-systems-status').innerHTML = gamificationStatus;
+                log(`Gamification systems: ${systemCount}/${gamificationSystems.length} available`, 
+                    systemCount === gamificationSystems.length ? 'success' : 'warning');
+
+            } catch (error) {
+                document.getElementById('gamification-systems-status').innerHTML = '<span class="badge error">Error</span>';
+                log(`❌ Gamification systems check failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkDatabaseConnection() {
+            try {
+                if (typeof window.getRandomQuestion === 'function') {
+                    const question = await window.getRandomQuestion();
+                    const connected = question && question.question_text;
+                    
+                    document.getElementById('database-status').innerHTML = 
+                        `<span class="badge ${connected ? 'success' : 'error'}">${connected ? 'Connected' : 'Failed'}</span>`;
+                    
+                    log(`Database connection: ${connected ? 'Working' : 'Failed'}`, 
+                        connected ? 'success' : 'error');
+                } else {
+                    document.getElementById('database-status').innerHTML = '<span class="badge error">No Function</span>';
+                    log('❌ getRandomQuestion function not available', 'error');
+                }
+            } catch (error) {
+                document.getElementById('database-status').innerHTML = '<span class="badge error">Error</span>';
+                log(`❌ Database connection test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkUserSession() {
+            try {
+                const userId = extensionCore.userId;
+                const hasSession = !!userId;
+                
+                document.getElementById('user-session-status').innerHTML = 
+                    `<span class="badge ${hasSession ? 'success' : 'warning'}">${hasSession ? userId.substring(0, 12) + '...' : 'No Session'}</span>`;
+                
+                log(`User session: ${hasSession ? 'Active (' + userId + ')' : 'None'}`, 
+                    hasSession ? 'success' : 'warning');
+
+            } catch (error) {
+                document.getElementById('user-session-status').innerHTML = '<span class="badge error">Error</span>';
+                log(`❌ User session check failed: ${error.message}`, 'error');
+            }
+        }
+
+        function updateStatus(elementId, success, message) {
+            const element = document.getElementById(elementId);
+            const indicator = element.querySelector('.status-indicator');
+            const text = element.querySelector('span:last-child') || element;
+            
+            if (indicator) {
+                indicator.className = `status-indicator ${success ? 'status-success' : 'status-error'}`;
+            }
+            if (text !== indicator) {
+                text.textContent = message;
+            }
+        }
+
+        function updateAllStatusCards(success) {
+            const cards = ['core-systems-status', 'gamification-systems-status', 'database-status', 'user-session-status'];
+            cards.forEach(cardId => {
+                document.getElementById(cardId).innerHTML = 
+                    `<span class="badge ${success ? 'success' : 'error'}">${success ? 'OK' : 'Failed'}</span>`;
+            });
+        }
+
+        async function loadCurrentStats() {
+            try {
+                if (!extensionCore) {
+                    log('⚠️ ExtensionCore not available for stats loading', 'warning');
+                    return;
+                }
+
+                const stats = await extensionCore.getGamificationStats();
+                
+                if (stats.success) {
+                    document.getElementById('current-xp').textContent = stats.xp.current || 0;
+                    document.getElementById('current-level').textContent = stats.xp.level || 1;
+                    document.getElementById('current-streak').textContent = stats.streaks.current || 0;
+                    document.getElementById('badges-earned').textContent = stats.badges.earned || 0;
+
+                    // Get basic stats
+                    const basicStats = await extensionCore.getBasicStats();
+                    document.getElementById('questions-answered').textContent = basicStats.questionsAnswered || 0;
+                    document.getElementById('total-attempts').textContent = basicStats.totalAttempts || 0;
+
+                    log('📊 Current stats loaded successfully', 'success');
+                } else {
+                    log('⚠️ Could not load gamification stats', 'warning');
+                }
+
+            } catch (error) {
+                log(`❌ Error loading current stats: ${error.message}`, 'error');
+            }
+        }
+
+        // Test Functions
+        async function runFullDiagnostic() {
+            log('🔍 Running full diagnostic...', 'info');
+            clearResults();
+            
+            await checkExtensionStatus();
+            await testDependencies();
+            await testExtensionCore();
+            if (extensionCore) {
+                await testAllGamification();
+            }
+            
+            log('🔍 Full diagnostic completed', 'success');
+        }
+
+        async function testExtensionCore() {
+            log('🏗️ Testing ExtensionCore...', 'info');
+            
+            try {
+                if (!extensionCore) {
+                    log('❌ ExtensionCore not available', 'error');
+                    return;
+                }
+
+                // Test core properties
+                log(`✅ ExtensionCore userId: ${extensionCore.userId}`, 'success');
+                log(`✅ Available systems: ${extensionCore.getAvailableSystems().join(', ')}`, 'success');
+                log(`✅ Is initialized: ${extensionCore.isInitialized}`, 'success');
+
+                // Test system access
+                const xpManager = extensionCore.getSystem('XPManager');
+                if (xpManager) {
+                    log('✅ XPManager accessible via ExtensionCore', 'success');
+                } else {
+                    log('⚠️ XPManager not accessible', 'warning');
+                }
+
+            } catch (error) {
+                log(`❌ ExtensionCore test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testDependencies() {
+            log('📦 Testing dependencies...', 'info');
+            
+            const dependencies = [
+                'EXTENSION_CONFIG',
+                'ExtensionCore',
+                'getRandomQuestion',
+                'QuizState',
+                'QuizModal',
+                'FeedbackManager',
+                'BlockManager',
+                'XPManager',
+                'BadgeManager',
+                'StreakManager',
+                'ChallengeEngine'
+            ];
+
+            dependencies.forEach(dep => {
+                const available = typeof window[dep] !== 'undefined';
+                log(`${available ? '✅' : '❌'} ${dep}: ${available ? 'Available' : 'Missing'}`, 
+                    available ? 'success' : 'error');
+            });
+        }
+
+        async function testXPSystem() {
+            log('⭐ Testing XP System...', 'info');
+            
+            try {
+                const xpManager = extensionCore?.getSystem('XPManager');
+                if (!xpManager) {
+                    log('❌ XPManager not available', 'error');
+                    return;
+                }
+
+                // Test XP calculation
+                const xpAmount = xpManager.calculateQuestionXP('medium', 1, 30000, 0);
+                log(`✅ XP calculation: ${xpAmount} XP for medium question`, 'success');
+
+                // Test XP awarding
+                const userId = extensionCore.userId;
+                const xpResult = await xpManager.awardXP(userId, xpAmount, {
+                    source: 'test',
+                    difficulty: 'medium'
+                });
+
+                if (xpResult.success) {
+                    log(`✅ XP awarded: +${xpResult.xpGained} XP`, 'success');
+                    if (xpResult.leveledUp) {
+                        log(`🎉 Level up! New level: ${xpResult.newLevel}`, 'success');
+                    }
+                } else {
+                    log(`❌ XP award failed: ${xpResult.error}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ XP system test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testStreakSystem() {
+            log('🔥 Testing Streak System...', 'info');
+            
+            try {
+                const streakManager = extensionCore?.getSystem('StreakManager');
+                if (!streakManager) {
+                    log('❌ StreakManager not available', 'error');
+                    return;
+                }
+
+                const streakResult = await streakManager.updateStreak(true, 'medium');
+                
+                if (streakResult.success) {
+                    log(`✅ Streak updated: ${streakResult.currentStreak}`, 'success');
+                    if (streakResult.streakReward) {
+                        log(`🔥 Streak reward: ${streakResult.streakReward.message}`, 'success');
+                    }
+                } else {
+                    log(`❌ Streak update failed: ${streakResult.error}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Streak system test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBadgeSystem() {
+            log('🏆 Testing Badge System...', 'info');
+            
+            try {
+                const badgeManager = extensionCore?.getSystem('BadgeManager');
+                const xpManager = extensionCore?.getSystem('XPManager');
+                
+                if (!badgeManager || !xpManager) {
+                    log('❌ Badge or XP Manager not available', 'error');
+                    return;
+                }
+
+                const userProgress = await xpManager.getUserProgress();
+                const badgeResult = await badgeManager.checkForNewBadges(userProgress);
+                
+                if (badgeResult.success) {
+                    log(`✅ Badge check completed`, 'success');
+                    if (badgeResult.newBadges && badgeResult.newBadges.length > 0) {
+                        badgeResult.newBadges.forEach(badge => {
+                            log(`🏆 New badge earned: ${badge.name}`, 'success');
+                        });
+                    } else {
+                        log(`ℹ️ No new badges earned`, 'info');
+                    }
+                } else {
+                    log(`❌ Badge check failed: ${badgeResult.error}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Badge system test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testChallengeSystem() {
+            log('🎯 Testing Challenge System...', 'info');
+            
+            try {
+                const challengeEngine = extensionCore?.getSystem('ChallengeEngine');
+                if (!challengeEngine) {
+                    log('❌ ChallengeEngine not available', 'error');
+                    return;
+                }
+
+                const userId = extensionCore.userId;
+                const challengeResult = await challengeEngine.generateDailyChallenge(userId);
+                
+                if (challengeResult.success) {
+                    log(`✅ Daily challenge: ${challengeResult.challenge.title}`, 'success');
+                    log(`📝 Description: ${challengeResult.challenge.description}`, 'info');
+                } else {
+                    log(`❌ Challenge generation failed: ${challengeResult.error}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Challenge system test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testAllGamification() {
+            log('🚀 Testing all gamification systems...', 'info');
+            
+            await testXPSystem();
+            await testStreakSystem();
+            await testBadgeSystem();
+            await testChallengeSystem();
+            
+            // Reload stats
+            await loadCurrentStats();
+            
+            log('🚀 All gamification tests completed', 'success');
+        }
+
+        async function testQuizFlow() {
+            log('📝 Testing quiz flow...', 'info');
+            
+            try {
+                if (!extensionCore) {
+                    log('❌ ExtensionCore not available', 'error');
+                    return;
+                }
+
+                // Test if quiz should show
+                const shouldShow = await extensionCore.shouldShowQuiz();
+                log(`✅ Should show quiz: ${shouldShow}`, 'info');
+
+                // Test question fetching
+                const question = await extensionCore.fetchQuestion();
+                if (question) {
+                    log(`✅ Question fetched: ${question.question_text.substring(0, 50)}...`, 'success');
+                } else {
+                    log(`❌ Question fetch failed`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Quiz flow test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function forceQuiz() {
+            log('⚡ Forcing quiz...', 'info');
+            
+            try {
+                if (extensionCore && typeof extensionCore.forceQuiz === 'function') {
+                    await extensionCore.forceQuiz();
+                    log('✅ Quiz forced via ExtensionCore', 'success');
+                } else if (window.debugSATQuiz?.forceQuiz) {
+                    await window.debugSATQuiz.forceQuiz();
+                    log('✅ Quiz forced via debug interface', 'success');
+                } else {
+                    log('❌ No method available to force quiz', 'error');
+                }
+            } catch (error) {
+                log(`❌ Force quiz failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function simulateCorrectAnswer() {
+            log('✅ Simulating correct answer...', 'info');
+            
+            try {
+                // This would normally be called internally during quiz processing
+                const mockQuestion = {
+                    question_id: 'test-' + Date.now(),
+                    difficulty: 'medium',
+                    tag: 'algebra'
+                };
+
+                const rewards = await extensionCore?.processGamificationRewards?.(mockQuestion, 1, 25000);
+                if (rewards) {
+                    log(`✅ Simulated rewards: XP=${rewards.xp.success}, Streaks=${rewards.streaks.success}`, 'success');
+                } else {
+                    log('⚠️ Cannot simulate - method not available', 'warning');
+                }
+
+            } catch (error) {
+                log(`❌ Correct answer simulation failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function simulateIncorrectAnswer() {
+            log('❌ Simulating incorrect answer...', 'info');
+            log('ℹ️ Incorrect answers break streaks but don\'t award XP', 'info');
+        }
+
+        async function testQuizRewards() {
+            log('🎁 Testing quiz rewards system...', 'info');
+            
+            // Run XP and streak tests as these are the main reward components
+            await testXPSystem();
+            await testStreakSystem();
+        }
+
+        async function testPopupCommunication() {
+            log('📡 Testing popup communication...', 'info');
+            
+            try {
+                if (typeof chrome !== 'undefined' && chrome.runtime) {
+                    const response = await chrome.runtime.sendMessage({ action: 'testContent' });
+                    log(`✅ Popup communication: ${JSON.stringify(response)}`, 'success');
+                } else {
+                    log('⚠️ Chrome runtime not available (testing mode)', 'warning');
+                }
+            } catch (error) {
+                log(`❌ Popup communication test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testStatsRetrieval() {
+            log('📊 Testing stats retrieval...', 'info');
+            
+            try {
+                const stats = await extensionCore?.getGamificationStats();
+                if (stats) {
+                    log(`✅ Gamification stats retrieved`, 'success');
+                    log(`📊 XP: ${stats.xp?.current}, Level: ${stats.xp?.level}, Streak: ${stats.streaks?.current}`, 'info');
+                } else {
+                    log('❌ Stats retrieval failed', 'error');
+                }
+            } catch (error) {
+                log(`❌ Stats retrieval test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testResetStats() {
+            log('🔄 Testing stats reset...', 'warning');
+            
+            if (confirm('This will reset all statistics. Continue?')) {
+                try {
+                    const result = await extensionCore?.resetStats();
+                    if (result?.success) {
+                        log('✅ Stats reset successfully', 'success');
+                        await loadCurrentStats();
+                    } else {
+                        log('❌ Stats reset failed', 'error');
+                    }
+                } catch (error) {
+                    log(`❌ Stats reset test failed: ${error.message}`, 'error');
+                }
+            }
+        }
+    </script>
+</body>
+</html> 

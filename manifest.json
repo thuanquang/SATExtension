@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "SAT Quiz Blocker",
-  "version": "2.0.0",
-  "description": "Blocks websites until users answer SAT questions correctly - Refactored",
+  "version": "3.0.0",
+  "description": "Blocks websites until users answer SAT questions correctly - Fully Refactored with Gamification",
   "permissions": [
     "storage",
     "scripting",
