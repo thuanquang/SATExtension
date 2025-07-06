@@ -66,7 +66,42 @@ class QuizController {
     try {
       console.log('🎮 Initializing gamification systems...');
       
-      // For now, just log - gamification systems will be added later
+      // Initialize XP Manager
+      if (window.XPManager) {
+        this.xpManager = new window.XPManager(null);
+        console.log('🎮 XP Manager initialized');
+      }
+      
+      // Initialize Badge Manager
+      if (window.BadgeManager) {
+        this.badgeManager = new window.BadgeManager(null);
+        console.log('🎮 Badge Manager initialized');
+      }
+      
+      // Initialize Streak Manager
+      if (window.StreakManager) {
+        this.streakManager = new window.StreakManager(null);
+        console.log('🎮 Streak Manager initialized');
+      }
+      
+      // Initialize Challenge Engine
+      if (window.ChallengeEngine) {
+        this.challengeEngine = new window.ChallengeEngine(null);
+        console.log('🎮 Challenge Engine initialized');
+      }
+      
+      // Initialize Progress Dashboard
+      if (window.ProgressDashboard) {
+        this.progressDashboard = new window.ProgressDashboard(null);
+        console.log('🎮 Progress Dashboard initialized');
+      }
+      
+      // Initialize Customization Manager
+      if (window.CustomizationManager) {
+        this.customizationManager = new window.CustomizationManager(null);
+        console.log('🎮 Customization Manager initialized');
+      }
+      
       console.log('🎮 Gamification systems initialized successfully');
       return { success: true };
     } catch (error) {
@@ -268,12 +303,9 @@ class QuizController {
     const currentQuestion = this.state.getCurrentQuestion();
     const attempts = this.state.getMaxAttempts();
     
-    // Record failed session for analytics
-    await this._recordEnhancedSession(currentQuestion, false, attempts, timeToAnswer, {
-      xp: { success: false },
-      streaks: { results: { correctAnswerStreak: { streakBroken: true } } },
-      badges: { newBadges: [] }
-    });
+    // Process streak breaking and record session
+    const failureResults = await this._processIncorrectAnswerEffects(currentQuestion, attempts, timeToAnswer);
+    await this._recordEnhancedSession(currentQuestion, false, attempts, timeToAnswer, failureResults);
     
     // Do NOT enter review mode (no click outside to close)
     this.feedback.showMessage('❌ You have reached the maximum number of attempts.', 'error');
@@ -362,20 +394,134 @@ class QuizController {
   }
 
   /**
-   * Process correct answer rewards (XP, badges, streaks) - simplified
+   * Process incorrect answer effects (streak breaking, stats update)
+   */
+  async _processIncorrectAnswerEffects(question, attempts, timeToAnswer) {
+    try {
+      console.log('🎮 Processing incorrect answer effects...');
+      
+      const results = {
+        xp: { success: false },
+        streaks: { success: false, streakBroken: false },
+        badges: { success: false, newBadges: [] },
+        challenge: { success: false },
+        question: question
+      };
+      
+      // Break streaks
+      if (this.streakManager) {
+        const streakResult = await this.streakManager.updateStreak(false, question.difficulty);
+        results.streaks = streakResult;
+        console.log('💔 Streak broken:', streakResult);
+      }
+      
+      // Update user stats (incorrect answer)
+      if (this.xpManager) {
+        await this.xpManager.updateUserStats(false, question.difficulty);
+      }
+      
+      // Update challenge progress (might still count toward volume challenges)
+      if (this.challengeEngine) {
+        const challengeResult = await this.challengeEngine.updateChallengeProgress(this.userId, {
+          isCorrect: false,
+          difficulty: question.difficulty,
+          subject: question.tag,
+          timeToAnswer: timeToAnswer,
+          attempts: attempts
+        });
+        
+        results.challenge = challengeResult;
+      }
+      
+      return results;
+      
+    } catch (error) {
+      console.error('🎮 Error processing incorrect answer effects:', error);
+      return { error: error.message };
+    }
+  }
+
+  /**
+   * Process correct answer rewards (XP, badges, streaks)
    */
   async _processCorrectAnswerRewards(question, attempts, timeToAnswer) {
     try {
       console.log('🎮 Processing gamification rewards...');
       
-      // Simplified for now - just return success
-      return {
-        xp: { success: true, xpGained: 10 },
-        streaks: { results: { correctAnswerStreak: { streakCount: 1 } } },
-        badges: { newBadges: [] },
-        challenge: { success: true },
+      const results = {
+        xp: { success: false },
+        streaks: { success: false },
+        badges: { success: false, newBadges: [] },
+        challenge: { success: false },
         question: question
       };
+      
+      // Update streaks first
+      if (this.streakManager) {
+        const streakResult = await this.streakManager.updateStreak(true, question.difficulty);
+        results.streaks = streakResult;
+        console.log('🔥 Streak updated:', streakResult);
+      }
+      
+      // Calculate and award XP
+      if (this.xpManager) {
+        const currentStreak = results.streaks.currentStreak || 0;
+        const xpAmount = this.xpManager.calculateQuestionXP(
+          question.difficulty, 
+          attempts, 
+          timeToAnswer, 
+          currentStreak
+        );
+        
+        const xpResult = await this.xpManager.awardXP(this.userId, xpAmount, {
+          source: 'question_completion',
+          difficulty: question.difficulty,
+          attempts: attempts,
+          timeToAnswer: timeToAnswer,
+          questionId: question.question_id
+        });
+        
+        results.xp = xpResult;
+        console.log('⭐ XP awarded:', xpResult);
+        
+        // Update user stats
+        await this.xpManager.updateUserStats(true, question.difficulty);
+      }
+      
+      // Check for new badges
+      if (this.badgeManager && this.xpManager) {
+        const userProgress = await this.xpManager.getUserProgress();
+        const badgeResult = await this.badgeManager.checkForNewBadges(userProgress);
+        results.badges = badgeResult;
+        
+        if (badgeResult.newBadges && badgeResult.newBadges.length > 0) {
+          console.log('🏆 New badges earned:', badgeResult.newBadges);
+        }
+      }
+      
+      // Update challenge progress
+      if (this.challengeEngine) {
+        const challengeResult = await this.challengeEngine.updateChallengeProgress(this.userId, {
+          isCorrect: true,
+          difficulty: question.difficulty,
+          subject: question.tag,
+          timeToAnswer: timeToAnswer,
+          attempts: attempts
+        });
+        
+        results.challenge = challengeResult;
+        
+        if (challengeResult.justCompleted) {
+          console.log('🎯 Challenge completed!', challengeResult.challenge);
+        }
+      }
+      
+      // Update daily streak
+      if (this.streakManager) {
+        await this.streakManager.updateDailyStreak();
+      }
+      
+      return results;
       
     } catch (error) {
       console.error('🎮 Error processing rewards:', error);
@@ -388,19 +534,49 @@ class QuizController {
    */
   _showEnhancedSuccessMessage(results) {
     let message = '✅ Correct! Well done!';
+    let additionalMessages = [];
     
+    // Add XP information
     if (results.xp && results.xp.success) {
       message += ` (+${results.xp.xpGained || 10} XP)`;
-    }
-    
-    if (results.streaks && results.streaks.results) {
-      const streak = results.streaks.results.correctAnswerStreak;
-      if (streak && streak.streakCount > 1) {
-        message += ` 🔥 ${streak.streakCount} streak!`;
+      
+      if (results.xp.leveledUp) {
+        additionalMessages.push(`🎉 Level up! You're now level ${results.xp.newLevel}!`);
       }
     }
     
+    // Add streak information
+    if (results.streaks && results.streaks.success) {
+      if (results.streaks.currentStreak > 1) {
+        message += ` 🔥 ${results.streaks.currentStreak} streak!`;
+      }
+      
+      if (results.streaks.streakReward) {
+        additionalMessages.push(`🔥 Streak milestone! ${results.streaks.streakReward.message}`);
+      }
+    }
+    
+    // Add badge information
+    if (results.badges && results.badges.newBadges && results.badges.newBadges.length > 0) {
+      results.badges.newBadges.forEach(badge => {
+        additionalMessages.push(`🏆 New badge: ${badge.name}!`);
+      });
+    }
+    
+    // Add challenge information
+    if (results.challenge && results.challenge.justCompleted) {
+      additionalMessages.push(`🎯 Challenge completed: ${results.challenge.challenge.title}!`);
+    }
+    
+    // Show main message
     this.feedback.showMessage(message, 'success');
+    
+    // Show additional messages with delay
+    additionalMessages.forEach((msg, index) => {
+      setTimeout(() => {
+        this.feedback.showMessage(msg, 'achievement', 3000);
+      }, (index + 1) * 1500);
+    });
   }
 
   /**
@@ -461,14 +637,87 @@ class QuizController {
    */
   async getGamificationSummary() {
     try {
-      // Simplified for now
-      return {
+      const summary = {
         success: true,
-        xp: { current: 0, level: 1, nextLevelXP: 100 },
-        streaks: { correct: 0, daily: 0 },
-        badges: { earned: 0, total: 0 },
-        challenges: { active: 0, completed: 0 }
+        xp: { current: 0, level: 1, nextLevelXP: 100, progressPercentage: 0 },
+        streaks: { current: 0, longest: 0, daily: 0, level: 'none' },
+        badges: { earned: 0, total: 0, recent: [] },
+        challenges: { hasChallenge: false, progress: 0 },
+        customization: { currentTheme: 'Default', availableThemes: 0 }
       };
+      
+      // Get XP summary
+      if (this.xpManager) {
+        const xpSummary = await this.xpManager.getXPSummary();
+        if (xpSummary.success) {
+          summary.xp = {
+            current: xpSummary.totalXP,
+            level: xpSummary.currentLevel,
+            nextLevelXP: xpSummary.nextLevelXP,
+            progressPercentage: xpSummary.progressPercentage,
+            streakMultiplier: xpSummary.streakMultiplier
+          };
+        }
+      }
+      
+      // Get streak summary
+      if (this.streakManager) {
+        const streakSummary = await this.streakManager.getStreakSummary();
+        if (streakSummary.success) {
+          summary.streaks = {
+            current: streakSummary.summary.currentStreak,
+            longest: streakSummary.summary.longestStreak,
+            daily: streakSummary.summary.dailyStreak,
+            level: streakSummary.summary.streakLevel,
+            isOnFire: streakSummary.summary.isOnFire,
+            nextMilestone: streakSummary.summary.nextMilestone
+          };
+        }
+      }
+      
+      // Get badge summary
+      if (this.badgeManager) {
+        const badgeSummary = await this.badgeManager.getBadgeSummary();
+        if (badgeSummary.success) {
+          summary.badges = {
+            earned: badgeSummary.summary.totalEarned,
+            total: badgeSummary.summary.totalAvailable,
+            recent: badgeSummary.summary.recentBadges,
+            rarityBreakdown: badgeSummary.summary.rarityBreakdown
+          };
+        }
+      }
+      
+      // Get challenge summary
+      if (this.challengeEngine) {
+        const challengeSummary = await this.challengeEngine.getChallengeSummary(this.userId);
+        if (challengeSummary.success) {
+          summary.challenges = challengeSummary.hasChallenge ? {
+            hasChallenge: true,
+            title: challengeSummary.challenge.title,
+            description: challengeSummary.challenge.description,
+            progress: challengeSummary.challenge.progress,
+            isCompleted: challengeSummary.challenge.isCompleted,
+            timeRemaining: challengeSummary.challenge.timeRemaining
+          } : { hasChallenge: false };
+        }
+      }
+      
+      // Get customization summary
+      if (this.customizationManager) {
+        const customSummary = await this.customizationManager.getCustomizationSummary(this.userId);
+        if (customSummary.success) {
+          summary.customization = {
+            currentTheme: customSummary.summary.currentTheme.name,
+            currentLayout: customSummary.summary.currentLayout.name,
+            availableThemes: customSummary.summary.availableThemes,
+            availableLayouts: customSummary.summary.availableLayouts,
+            customizationLevel: customSummary.summary.customizationLevel
+          };
+        }
+      }
+      
+      return summary;
     } catch (error) {
       console.error('🎮 Error getting gamification summary:', error);
       return { success: false, error: error.message };

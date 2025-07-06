@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamification Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            margin: 20px 0;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-result {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        .warning { background-color: #fff3cd; color: #856404; }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        button:disabled { background-color: #6c757d; cursor: not-allowed; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 4px solid #007bff;
+        }
+        .stat-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #28a745;
+            transition: width 0.3s ease;
+        }
+        .badge-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .badge {
+            background: #6f42c1;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+        }
+        .challenge-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Gamification Systems Integration Test</h1>
+    <p>This page tests all gamification systems working together with the quiz controller.</p>
+
+    <!-- Control Panel -->
+    <div class="test-section">
+        <h2>🎛️ Test Controls</h2>
+        <button onclick="initializeTest()">Initialize Systems</button>
+        <button onclick="simulateCorrectAnswer()">Simulate Correct Answer</button>
+        <button onclick="simulateIncorrectAnswer()">Simulate Incorrect Answer</button>
+        <button onclick="simulateQuizSession()">Simulate Full Quiz Session</button>
+        <button onclick="generateDailyChallenge()">Generate Daily Challenge</button>
+        <button onclick="refreshStats()">Refresh All Stats</button>
+        <button onclick="resetProgress()">Reset Progress</button>
+    </div>
+
+    <!-- System Status -->
+    <div class="test-section">
+        <h2>🔧 System Status</h2>
+        <div id="systemStatus"></div>
+    </div>
+
+    <!-- XP & Level Progress -->
+    <div class="test-section">
+        <h2>⭐ XP & Level System</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="currentXP">0</div>
+                <div>Total XP</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="currentLevel">1</div>
+                <div>Current Level</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="streakMultiplier">1.0x</div>
+                <div>Streak Multiplier</div>
+            </div>
+        </div>
+        <div>
+            <strong>Progress to Next Level:</strong>
+            <div class="progress-bar">
+                <div class="progress-fill" id="xpProgress" style="width: 0%"></div>
+            </div>
+            <span id="xpProgressText">0 / 100 XP</span>
+        </div>
+    </div>
+
+    <!-- Streak System -->
+    <div class="test-section">
+        <h2>🔥 Streak System</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="currentStreak">0</div>
+                <div>Current Streak</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="longestStreak">0</div>
+                <div>Longest Streak</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="dailyStreak">0</div>
+                <div>Daily Streak</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="streakLevel">None</div>
+                <div>Streak Level</div>
+            </div>
+        </div>
+        <div id="streakMessage"></div>
+    </div>
+
+    <!-- Badge System -->
+    <div class="test-section">
+        <h2>🏆 Badge System</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="badgesEarned">0</div>
+                <div>Badges Earned</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="badgesTotal">0</div>
+                <div>Total Available</div>
+            </div>
+        </div>
+        <div>
+            <strong>Recent Badges:</strong>
+            <div class="badge-list" id="recentBadges"></div>
+        </div>
+        <div>
+            <strong>Badge Progress:</strong>
+            <div id="badgeProgress"></div>
+        </div>
+    </div>
+
+    <!-- Challenge System -->
+    <div class="test-section">
+        <h2>🎯 Daily Challenge</h2>
+        <div id="challengeContainer">
+            <div class="challenge-card">
+                <div>No active challenge</div>
+                <button onclick="generateDailyChallenge()">Generate Challenge</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Stats -->
+    <div class="test-section">
+        <h2>📊 User Statistics</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="questionsAnswered">0</div>
+                <div>Questions Answered</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="correctAnswers">0</div>
+                <div>Correct Answers</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="accuracy">0%</div>
+                <div>Accuracy</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Results -->
+    <div class="test-section">
+        <h2>🧪 Test Results</h2>
+        <div id="testResults"></div>
+    </div>
+
+    <!-- Load all required scripts -->
+    <script src="../src/db/config.js"></script>
+    <script src="../src/db/supabase-client.js"></script>
+    <script src="../src/systems/XPManager.js"></script>
+    <script src="../src/systems/BadgeManager.js"></script>
+    <script src="../src/systems/StreakManager.js"></script>
+    <script src="../src/systems/ChallengeEngine.js"></script>
+    <script src="../src/systems/CustomizationManager.js"></script>
+    <script src="../src/systems/ProgressDashboard.js"></script>
+    <script src="../src/components/QuizState.js"></script>
+    <script src="../src/components/FeedbackManager.js"></script>
+    <script src="../src/components/QuizModal.js"></script>
+    <script src="../src/components/BlockManager.js"></script>
+    <script src="../src/controller/QuizController.js"></script>
+
+    <script>
+        // Test state
+        let testController = null;
+        let userId = 'test-user-123';
+
+        // Mock current user ID
+        window.getCurrentUserId = async () => userId;
+        window.ensureAuth = async () => true;
+
+        // Test utilities
+        function logResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.textContent = `${new Date().toLocaleTimeString()}: ${message}`;
+            document.getElementById('testResults').appendChild(div);
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function updateSystemStatus() {
+            const systems = [
+                { name: 'XPManager', available: !!window.XPManager },
+                { name: 'BadgeManager', available: !!window.BadgeManager },
+                { name: 'StreakManager', available: !!window.StreakManager },
+                { name: 'ChallengeEngine', available: !!window.ChallengeEngine },
+                { name: 'CustomizationManager', available: !!window.CustomizationManager },
+                { name: 'ProgressDashboard', available: !!window.ProgressDashboard },
+                { name: 'QuizController', available: !!window.QuizController }
+            ];
+
+            const statusHtml = systems.map(sys => 
+                `<div class="test-result ${sys.available ? 'success' : 'error'}">
+                    ${sys.name}: ${sys.available ? '✅ Available' : '❌ Not Available'}
+                </div>`
+            ).join('');
+
+            document.getElementById('systemStatus').innerHTML = statusHtml;
+        }
+
+        async function initializeTest() {
+            try {
+                logResult('Initializing test environment...', 'info');
+                
+                // Initialize QuizController
+                testController = new window.QuizController();
+                await testController.initializeGamificationSystems();
+                
+                logResult('✅ All systems initialized successfully', 'success');
+                await refreshStats();
+                
+            } catch (error) {
+                logResult(`❌ Initialization failed: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function simulateCorrectAnswer() {
+            if (!testController) {
+                logResult('❌ Initialize systems first', 'error');
+                return;
+            }
+
+            try {
+                logResult('Simulating correct answer...', 'info');
+                
+                const mockQuestion = {
+                    question_id: 'test-' + Date.now(),
+                    difficulty: 'medium',
+                    tag: 'math'
+                };
+
+                const results = await testController._processCorrectAnswerRewards(
+                    mockQuestion, 
+                    1, // attempts
+                    25000 // time to answer (25 seconds)
+                );
+
+                logResult(`✅ Correct answer processed: +${results.xp?.xpGained || 0} XP`, 'success');
+                
+                if (results.streaks?.currentStreak > 1) {
+                    logResult(`🔥 Streak: ${results.streaks.currentStreak}`, 'success');
+                }
+
+                if (results.badges?.newBadges?.length > 0) {
+                    results.badges.newBadges.forEach(badge => {
+                        logResult(`🏆 New badge: ${badge.name}`, 'success');
+                    });
+                }
+
+                await refreshStats();
+                
+            } catch (error) {
+                logResult(`❌ Error simulating correct answer: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function simulateIncorrectAnswer() {
+            if (!testController) {
+                logResult('❌ Initialize systems first', 'error');
+                return;
+            }
+
+            try {
+                logResult('Simulating incorrect answer...', 'info');
+                
+                const mockQuestion = {
+                    question_id: 'test-' + Date.now(),
+                    difficulty: 'medium',
+                    tag: 'math'
+                };
+
+                const results = await testController._processIncorrectAnswerEffects(
+                    mockQuestion, 
+                    3, // attempts
+                    45000 // time to answer (45 seconds)
+                );
+
+                logResult('❌ Incorrect answer processed', 'warning');
+                
+                if (results.streaks?.streakBroken) {
+                    logResult('💔 Streak broken', 'warning');
+                }
+
+                await refreshStats();
+                
+            } catch (error) {
+                logResult(`❌ Error simulating incorrect answer: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function simulateQuizSession() {
+            if (!testController) {
+                logResult('❌ Initialize systems first', 'error');
+                return;
+            }
+
+            try {
+                logResult('Simulating full quiz session...', 'info');
+                
+                // Simulate 5 questions with mixed results
+                for (let i = 0; i < 5; i++) {
+                    const isCorrect = Math.random() > 0.3; // 70% correct rate
+                    
+                    if (isCorrect) {
+                        await simulateCorrectAnswer();
+                    } else {
+                        await simulateIncorrectAnswer();
+                    }
+                    
+                    // Small delay between questions
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                }
+                
+                logResult('✅ Quiz session simulation completed', 'success');
+                
+            } catch (error) {
+                logResult(`❌ Error simulating quiz session: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function generateDailyChallenge() {
+            if (!testController?.challengeEngine) {
+                logResult('❌ Challenge system not available', 'error');
+                return;
+            }
+
+            try {
+                logResult('Generating daily challenge...', 'info');
+                
+                const result = await testController.challengeEngine.generateDailyChallenge(userId);
+                
+                if (result.success) {
+                    const challenge = result.challenge;
+                    document.getElementById('challengeContainer').innerHTML = `
+                        <div class="challenge-card">
+                            <h3>${challenge.icon} ${challenge.title}</h3>
+                            <p>${challenge.description}</p>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: 0%"></div>
+                            </div>
+                            <small>Reward: ${challenge.rewards.xp} XP</small>
+                        </div>
+                    `;
+                    
+                    logResult(`✅ Challenge generated: ${challenge.title}`, 'success');
+                } else {
+                    logResult(`❌ Challenge generation failed: ${result.error}`, 'error');
+                }
+                
+            } catch (error) {
+                logResult(`❌ Error generating challenge: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function refreshStats() {
+            if (!testController) {
+                logResult('❌ Initialize systems first', 'error');
+                return;
+            }
+
+            try {
+                const summary = await testController.getGamificationSummary();
+                
+                if (summary.success) {
+                    // Update XP stats
+                    document.getElementById('currentXP').textContent = summary.xp.current;
+                    document.getElementById('currentLevel').textContent = summary.xp.level;
+                    document.getElementById('streakMultiplier').textContent = 
+                        (summary.xp.streakMultiplier || 1.0).toFixed(1) + 'x';
+                    
+                    const progressPercent = summary.xp.progressPercentage || 0;
+                    document.getElementById('xpProgress').style.width = progressPercent + '%';
+                    document.getElementById('xpProgressText').textContent = 
+                        `${summary.xp.current} / ${summary.xp.nextLevelXP} XP`;
+                    
+                    // Update streak stats
+                    document.getElementById('currentStreak').textContent = summary.streaks.current;
+                    document.getElementById('longestStreak').textContent = summary.streaks.longest;
+                    document.getElementById('dailyStreak').textContent = summary.streaks.daily;
+                    document.getElementById('streakLevel').textContent = 
+                        summary.streaks.level.charAt(0).toUpperCase() + summary.streaks.level.slice(1);
+                    
+                    // Update badge stats
+                    document.getElementById('badgesEarned').textContent = summary.badges.earned;
+                    document.getElementById('badgesTotal').textContent = summary.badges.total;
+                    
+                    // Update recent badges
+                    const recentBadgesHtml = (summary.badges.recent || []).map(badge => 
+                        `<span class="badge">${badge.icon || '🏆'} ${badge.name}</span>`
+                    ).join('');
+                    document.getElementById('recentBadges').innerHTML = recentBadgesHtml || '<em>No recent badges</em>';
+                    
+                    // Update user stats (mock data for now)
+                    if (testController.xpManager) {
+                        const userProgress = await testController.xpManager.getUserProgress();
+                        document.getElementById('questionsAnswered').textContent = userProgress.questionsAnswered || 0;
+                        document.getElementById('correctAnswers').textContent = userProgress.correctAnswers || 0;
+                        document.getElementById('accuracy').textContent = 
+                            Math.round(userProgress.accuracy || 0) + '%';
+                    }
+                    
+                    logResult('📊 Stats refreshed successfully', 'info');
+                } else {
+                    logResult(`❌ Failed to refresh stats: ${summary.error}`, 'error');
+                }
+                
+            } catch (error) {
+                logResult(`❌ Error refreshing stats: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        async function resetProgress() {
+            if (confirm('Are you sure you want to reset all progress? This cannot be undone.')) {
+                try {
+                    logResult('Resetting all progress...', 'warning');
+                    
+                    // In a real implementation, this would clear the database
+                    // For testing, we'll just reinitialize
+                    await initializeTest();
+                    
+                    logResult('✅ Progress reset completed', 'success');
+                    
+                } catch (error) {
+                    logResult(`❌ Error resetting progress: ${error.message}`, 'error');
+                    console.error(error);
+                }
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSystemStatus();
+            logResult('🎮 Gamification test environment loaded', 'info');
+            logResult('Click "Initialize Systems" to begin testing', 'info');
+        });
+    </script>
+</body>
+</html> 

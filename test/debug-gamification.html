@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAT Quiz Extension - Gamification Debug</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: #f8f9fa;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+        }
+        .section h2 {
+            color: #007bff;
+            margin-top: 0;
+        }
+        .status {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+        .code {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .card h3 {
+            margin-top: 0;
+            color: #495057;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #007bff, #0056b3);
+            transition: width 0.3s ease;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            background: #007bff;
+            color: white;
+            border-radius: 4px;
+            font-size: 12px;
+            margin: 2px;
+        }
+        .log-output {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 SAT Quiz Extension - Gamification Debug</h1>
+        
+        <div class="section">
+            <h2>🔍 System Status</h2>
+            <div id="systemStatus">Loading...</div>
+        </div>
+        
+        <div class="section">
+            <h2>🎯 Core Dependencies</h2>
+            <div id="dependencyStatus">Loading...</div>
+        </div>
+        
+        <div class="section">
+            <h2>🎮 Gamification Systems</h2>
+            <div id="gamificationStatus">Loading...</div>
+        </div>
+        
+        <div class="section">
+            <h2>🧪 Test Actions</h2>
+            <button class="btn" onclick="testDatabaseConnection()">Test Database Connection</button>
+            <button class="btn" onclick="testUserProgress()">Test User Progress</button>
+            <button class="btn" onclick="testInitialization()">Test Initialization</button>
+            <button class="btn" onclick="testXPSystem()">Test XP System</button>
+            <button class="btn" onclick="testBadgeSystem()">Test Badge System</button>
+            <button class="btn" onclick="testStreakSystem()">Test Streak System</button>
+            <button class="btn" onclick="testChallengeSystem()">Test Challenge System</button>
+            <button class="btn" onclick="simulateQuizComplete()">Simulate Quiz Complete</button>
+            <button class="btn" onclick="clearLogs()">Clear Logs</button>
+        </div>
+        
+        <div class="section">
+            <h2>📊 Current Stats</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>🎯 XP & Level</h3>
+                    <div>Level: <span id="currentLevel">-</span></div>
+                    <div>XP: <span id="currentXP">-</span></div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="xpProgress" style="width: 0%"></div>
+                    </div>
+                    <div id="xpProgressText">-</div>
+                </div>
+                
+                <div class="card">
+                    <h3>🔥 Streaks</h3>
+                    <div>Current: <span id="currentStreak">-</span></div>
+                    <div>Longest: <span id="longestStreak">-</span></div>
+                    <div>Daily: <span id="dailyStreak">-</span></div>
+                    <div>Level: <span id="streakLevel">-</span></div>
+                </div>
+                
+                <div class="card">
+                    <h3>🏆 Badges</h3>
+                    <div>Earned: <span id="badgesEarned">-</span> / <span id="badgesTotal">-</span></div>
+                    <div id="recentBadges">No recent badges</div>
+                </div>
+                
+                <div class="card">
+                    <h3>🎯 Challenges</h3>
+                    <div>Active: <span id="hasChallenge">-</span></div>
+                    <div>Progress: <span id="challengeProgress">-</span></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>📝 Debug Log</h2>
+            <div class="log-output" id="debugLog">Debug log will appear here...\n</div>
+        </div>
+    </div>
+
+    <!-- Load all required scripts in the correct order -->
+    <script src="../src/db/config.js"></script>
+    <script src="../src/db/supabase-client.js"></script>
+    
+    <!-- Load gamification systems -->
+    <script src="../src/systems/XPManager.js"></script>
+    <script src="../src/systems/BadgeManager.js"></script>
+    <script src="../src/systems/StreakManager.js"></script>
+    <script src="../src/systems/ChallengeEngine.js"></script>
+    <script src="../src/systems/CustomizationManager.js"></script>
+    <script src="../src/systems/ProgressDashboard.js"></script>
+    
+    <!-- Load components -->
+    <script src="../src/components/QuizState.js"></script>
+    <script src="../src/components/FeedbackManager.js"></script>
+    <script src="../src/components/QuizModal.js"></script>
+    <script src="../src/components/BlockManager.js"></script>
+    
+    <!-- Load controller -->
+    <script src="../src/controller/QuizController.js"></script>
+
+    <script>
+        // Test state
+        let testController = null;
+        let userId = 'test-user-gamification-debug';
+
+        // Mock functions for testing
+        window.getCurrentUserId = async () => userId;
+        window.ensureAuth = async () => true;
+
+        // Debug logging
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('debugLog');
+            const colorMap = {
+                info: '#00ff00',
+                error: '#ff0000',
+                warning: '#ffff00',
+                success: '#00ff00'
+            };
+            
+            const color = colorMap[type] || '#00ff00';
+            logElement.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            logElement.scrollTop = logElement.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearLogs() {
+            document.getElementById('debugLog').innerHTML = 'Debug log cleared...\n';
+        }
+
+        // Check system status
+        function checkSystemStatus() {
+            const systems = [
+                { name: 'EXTENSION_CONFIG', check: () => typeof EXTENSION_CONFIG !== 'undefined' },
+                { name: 'Supabase Functions', check: () => typeof window.getRandomQuestion !== 'undefined' },
+                { name: 'XPManager', check: () => typeof window.XPManager !== 'undefined' },
+                { name: 'BadgeManager', check: () => typeof window.BadgeManager !== 'undefined' },
+                { name: 'StreakManager', check: () => typeof window.StreakManager !== 'undefined' },
+                { name: 'ChallengeEngine', check: () => typeof window.ChallengeEngine !== 'undefined' },
+                { name: 'CustomizationManager', check: () => typeof window.CustomizationManager !== 'undefined' },
+                { name: 'ProgressDashboard', check: () => typeof window.ProgressDashboard !== 'undefined' },
+                { name: 'QuizController', check: () => typeof window.QuizController !== 'undefined' }
+            ];
+
+            let html = '';
+            systems.forEach(system => {
+                const available = system.check();
+                const statusClass = available ? 'success' : 'error';
+                const statusText = available ? '✅ Available' : '❌ Not Available';
+                html += `<div class="status ${statusClass}">${system.name}: ${statusText}</div>`;
+            });
+
+            document.getElementById('systemStatus').innerHTML = html;
+            return systems;
+        }
+
+        // Test initialization
+        async function testInitialization() {
+            log('🧪 Testing initialization...', 'info');
+            
+            try {
+                // Create QuizController
+                testController = new window.QuizController();
+                log('✅ QuizController created successfully', 'success');
+                
+                // Initialize gamification systems
+                const result = await testController.initializeGamificationSystems();
+                
+                if (result.success) {
+                    log('✅ Gamification systems initialized successfully', 'success');
+                    
+                    // Log what was initialized
+                    const initialized = [];
+                    if (testController.xpManager) initialized.push('XPManager');
+                    if (testController.badgeManager) initialized.push('BadgeManager');
+                    if (testController.streakManager) initialized.push('StreakManager');
+                    if (testController.challengeEngine) initialized.push('ChallengeEngine');
+                    if (testController.customizationManager) initialized.push('CustomizationManager');
+                    if (testController.progressDashboard) initialized.push('ProgressDashboard');
+                    
+                    log(`✅ Initialized systems: ${initialized.join(', ')}`, 'success');
+                    
+                    // Update stats
+                    await refreshStats();
+                    
+                } else {
+                    log(`❌ Gamification initialization failed: ${result.error}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Initialization error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // Test XP system
+        async function testXPSystem() {
+            if (!testController || !testController.xpManager) {
+                log('❌ XP Manager not available. Run initialization first.', 'error');
+                return;
+            }
+            
+            log('🧪 Testing XP system...', 'info');
+            
+            try {
+                // Test XP calculation
+                const xpAmount = testController.xpManager.calculateQuestionXP('medium', 1, 25000, 5);
+                log(`✅ XP calculation test: ${xpAmount} XP for medium question`, 'success');
+                
+                // Test XP awarding
+                const awardResult = await testController.xpManager.awardXP(xpAmount, {
+                    source: 'test',
+                    difficulty: 'medium'
+                });
+                
+                if (awardResult && awardResult.success) {
+                    log(`✅ XP awarded successfully: +${awardResult.xpGained} XP`, 'success');
+                    if (awardResult.leveledUp) {
+                        log(`🎉 Level up! New level: ${awardResult.newLevel}`, 'success');
+                    }
+                } else {
+                    log(`❌ XP award failed: ${awardResult?.error || 'Unknown error'}`, 'error');
+                    log(`❌ XP award result object: ${JSON.stringify(awardResult)}`, 'error');
+                    console.error('Full XP award result:', awardResult);
+                }
+                
+                await refreshStats();
+                
+            } catch (error) {
+                log(`❌ XP system test error: ${error.message}`, 'error');
+                log(`❌ XP system stack trace: ${error.stack}`, 'error');
+                console.error('Full XP error:', error);
+            }
+        }
+
+        // Test badge system
+        async function testBadgeSystem() {
+            if (!testController || !testController.badgeManager) {
+                log('❌ Badge Manager not available. Run initialization first.', 'error');
+                return;
+            }
+            
+            log('🧪 Testing badge system...', 'info');
+            
+            try {
+                // Get user progress for badge checking
+                const userProgress = await testController.xpManager.getUserProgress();
+                log(`✅ User progress retrieved for badge checking`, 'success');
+                console.log('User progress data:', userProgress);
+                
+                // Check for new badges
+                const badgeResult = await testController.badgeManager.checkForNewBadges(userProgress);
+                
+                if (badgeResult.success) {
+                    log(`✅ Badge check completed`, 'success');
+                    if (badgeResult.newBadges && badgeResult.newBadges.length > 0) {
+                        badgeResult.newBadges.forEach(badge => {
+                            log(`🏆 New badge earned: ${badge.name}`, 'success');
+                        });
+                    } else {
+                        log(`ℹ️ No new badges earned`, 'info');
+                    }
+                } else {
+                    log(`❌ Badge check failed: ${badgeResult.error || 'Unknown error'}`, 'error');
+                    console.error('Full badge result:', badgeResult);
+                }
+                
+                await refreshStats();
+                
+            } catch (error) {
+                log(`❌ Badge system test error: ${error.message}`, 'error');
+                log(`❌ Badge system stack trace: ${error.stack}`, 'error');
+                console.error('Full badge error:', error);
+            }
+        }
+
+        // Test streak system
+        async function testStreakSystem() {
+            if (!testController || !testController.streakManager) {
+                log('❌ Streak Manager not available. Run initialization first.', 'error');
+                return;
+            }
+            
+            log('🧪 Testing streak system...', 'info');
+            
+            try {
+                // Test streak update
+                const streakResult = await testController.streakManager.updateStreak(true, 'medium');
+                
+                if (streakResult && streakResult.success) {
+                    log(`✅ Streak updated successfully: ${streakResult.currentStreak}`, 'success');
+                    if (streakResult.streakReward) {
+                        log(`🔥 Streak reward: ${streakResult.streakReward.message}`, 'success');
+                    }
+                } else {
+                    log(`❌ Streak update failed: ${streakResult?.error || 'Unknown error'}`, 'error');
+                    log(`❌ Streak result object: ${JSON.stringify(streakResult)}`, 'error');
+                    console.error('Full streak result:', streakResult);
+                }
+                
+                await refreshStats();
+                
+            } catch (error) {
+                log(`❌ Streak system test error: ${error.message}`, 'error');
+                log(`❌ Streak system stack trace: ${error.stack}`, 'error');
+                console.error('Full streak error:', error);
+            }
+        }
+
+        // Test ChallengeEngine
+        async function testChallengeEngine() {
+            log('🎯 Testing ChallengeEngine...', 'info');
+            
+            try {
+                if (!window.ChallengeEngine) {
+                    log('❌ ChallengeEngine not loaded', 'error');
+                    return;
+                }
+
+                const challengeEngine = new window.ChallengeEngine(window.supabaseClient);
+                log('✅ ChallengeEngine initialized', 'success');
+
+                // Test generating today's challenge
+                log('📅 Testing daily challenge generation...', 'info');
+                const challengeResult = await challengeEngine.generateDailyChallenge(userId);
+                
+                if (challengeResult.success) {
+                    log('✅ Daily challenge generated successfully', 'success');
+                    log(`📋 Challenge: ${challengeResult.challenge.title}`, 'info');
+                    log(`📝 Description: ${challengeResult.challenge.description}`, 'info');
+                    log(`🎯 Type: ${challengeResult.challenge.type}`, 'info');
+                    log(`⭐ Difficulty: ${challengeResult.challenge.difficulty || 'medium'}`, 'info');
+                    
+                    // Test challenge summary
+                    log('📊 Testing challenge summary...', 'info');
+                    const summaryResult = await challengeEngine.getChallengeSummary(userId);
+                    
+                    if (summaryResult.success) {
+                        log('✅ Challenge summary retrieved', 'success');
+                        log(`📈 Progress: ${summaryResult.challenge.progress.percentage.toFixed(1)}%`, 'info');
+                        log(`🎁 XP Reward: ${summaryResult.challenge.rewards.xp}`, 'info');
+                        log(`⏰ Time Remaining: ${summaryResult.challenge.timeRemaining}`, 'info');
+                        log(`🏆 Completed: ${summaryResult.challenge.isCompleted ? 'Yes' : 'No'}`, 'info');
+                    } else {
+                        log(`❌ Challenge summary failed: ${summaryResult.error}`, 'error');
+                    }
+
+                    // Test challenge progress update
+                    log('🔄 Testing challenge progress update...', 'info');
+                    const mockQuestionResult = {
+                        isCorrect: true,
+                        timeToAnswer: 15000, // 15 seconds
+                        subject: 'math',
+                        difficulty: 'medium'
+                    };
+                    
+                    const progressResult = await challengeEngine.updateChallengeProgress(userId, mockQuestionResult);
+                    
+                    if (progressResult.success) {
+                        log('✅ Challenge progress updated', 'success');
+                        if (progressResult.isCompleted) {
+                            log('🎉 Challenge completed!', 'success');
+                            if (progressResult.rewards) {
+                                log(`🎁 Rewards awarded: ${JSON.stringify(progressResult.rewards)}`, 'success');
+                            }
+                        } else {
+                            log(`📊 New progress: ${progressResult.progress.percentage.toFixed(1)}%`, 'info');
+                        }
+                    } else {
+                        log(`❌ Progress update failed: ${progressResult.error}`, 'error');
+                    }
+                    
+                } else {
+                    log(`❌ Daily challenge generation failed: ${challengeResult.error}`, 'error');
+                }
+
+                await refreshStats();
+
+            } catch (error) {
+                log(`❌ ChallengeEngine test error: ${error.message}`, 'error');
+                console.error('ChallengeEngine test error:', error);
+            }
+        }
+
+        // Simulate complete quiz
+        async function simulateQuizComplete() {
+            if (!testController) {
+                log('❌ Controller not available. Run initialization first.', 'error');
+                return;
+            }
+            
+            log('🧪 Simulating quiz completion...', 'info');
+            
+            try {
+                // Simulate a question
+                const mockQuestion = {
+                    question_id: 'test-' + Date.now(),
+                    difficulty: 'medium',
+                    tag: 'algebra',
+                    question_type: 'multiple_choice'
+                };
+                
+                // Process rewards
+                const results = await testController._processCorrectAnswerRewards(mockQuestion, 1, 30000);
+                
+                log('✅ Quiz completion simulation completed', 'success');
+                log(`📊 Results: XP=${results.xp.success}, Streaks=${results.streaks.success}, Badges=${results.badges.success}`, 'info');
+                console.log('Full quiz completion results:', results);
+                
+                await refreshStats();
+                
+            } catch (error) {
+                log(`❌ Quiz simulation error: ${error.message}`, 'error');
+                log(`❌ Quiz simulation stack trace: ${error.stack}`, 'error');
+                console.error('Full quiz simulation error:', error);
+            }
+        }
+
+        // Test user progress specifically
+        async function testUserProgress() {
+            log('🧪 Testing user progress retrieval...', 'info');
+            
+            try {
+                if (!testController || !testController.xpManager) {
+                    log('❌ XP Manager not available. Run initialization first.', 'error');
+                    return;
+                }
+                
+                // Test getUserProgress from XPManager
+                const userProgress = await testController.xpManager.getUserProgress();
+                log(`✅ XP Manager getUserProgress result:`, 'success');
+                log(`📊 Progress data: ${JSON.stringify(userProgress)}`, 'info');
+                
+                // Test getUserProgress from StreakManager
+                if (testController.streakManager) {
+                    const userId = await window.getCurrentUserId();
+                    const streakProgress = await testController.streakManager.getUserProgress(userId);
+                    log(`✅ Streak Manager getUserProgress result:`, 'success');
+                    log(`📊 Streak progress data: ${JSON.stringify(streakProgress)}`, 'info');
+                }
+                
+            } catch (error) {
+                log(`❌ User progress test error: ${error.message}`, 'error');
+                log(`❌ User progress stack trace: ${error.stack}`, 'error');
+                console.error('Full user progress error:', error);
+            }
+        }
+
+        // Add a test for basic database connectivity
+        async function testDatabaseConnection() {
+            log('🧪 Testing database connection...', 'info');
+            
+            try {
+                // Test basic Supabase query
+                const result = await window.supabaseQuery('questions', 'select');
+                
+                if (result.error) {
+                    log(`❌ Database connection failed: ${result.error}`, 'error');
+                } else {
+                    log(`✅ Database connected successfully. Found ${result.data.length} questions`, 'success');
+                }
+                
+                // Test user_progress table specifically
+                const userProgressResult = await window.supabaseQuery('user_progress', 'select');
+                
+                if (userProgressResult.error) {
+                    log(`❌ user_progress table access failed: ${userProgressResult.error}`, 'error');
+                } else {
+                    log(`✅ user_progress table accessible. Found ${userProgressResult.data.length} records`, 'success');
+                }
+                
+            } catch (error) {
+                log(`❌ Database test error: ${error.message}`, 'error');
+                log(`❌ Database test stack trace: ${error.stack}`, 'error');
+                console.error('Full database error:', error);
+            }
+        }
+
+        // Refresh stats display
+        async function refreshStats() {
+            if (!testController) return;
+            
+            try {
+                const summary = await testController.getGamificationSummary();
+                
+                if (summary.success) {
+                    // Update XP stats
+                    document.getElementById('currentXP').textContent = summary.xp.current;
+                    document.getElementById('currentLevel').textContent = summary.xp.level;
+                    
+                    const progressPercent = summary.xp.progressPercentage || 0;
+                    document.getElementById('xpProgress').style.width = progressPercent + '%';
+                    document.getElementById('xpProgressText').textContent = 
+                        `${summary.xp.current} / ${summary.xp.nextLevelXP} XP`;
+                    
+                    // Update streak stats
+                    document.getElementById('currentStreak').textContent = summary.streaks.current;
+                    document.getElementById('longestStreak').textContent = summary.streaks.longest;
+                    document.getElementById('dailyStreak').textContent = summary.streaks.daily;
+                    document.getElementById('streakLevel').textContent = 
+                        summary.streaks.level.charAt(0).toUpperCase() + summary.streaks.level.slice(1);
+                    
+                    // Update badge stats
+                    document.getElementById('badgesEarned').textContent = summary.badges.earned;
+                    document.getElementById('badgesTotal').textContent = summary.badges.total;
+                    
+                    // Update recent badges
+                    const recentBadgesHtml = (summary.badges.recent || []).map(badge => 
+                        `<span class="badge">${badge.icon || '🏆'} ${badge.name}</span>`
+                    ).join('');
+                    document.getElementById('recentBadges').innerHTML = recentBadgesHtml || 'No recent badges';
+                    
+                    // Update challenge stats
+                    document.getElementById('hasChallenge').textContent = summary.challenges.hasChallenge ? 'Yes' : 'No';
+                    document.getElementById('challengeProgress').textContent = summary.challenges.progress + '%';
+                    
+                    log('✅ Stats refreshed successfully', 'success');
+                } else {
+                    log(`❌ Failed to refresh stats: ${summary.error}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Stats refresh error: ${error.message}`, 'error');
+                console.error(error);
+            }
+        }
+
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 Gamification debug page loaded', 'info');
+            checkSystemStatus();
+            
+            // Auto-test initialization
+            setTimeout(() => {
+                testInitialization();
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 

@@ -25,6 +25,12 @@
       "js": [
         "src/db/config.js",
         "src/db/supabase-client.js",
+        "src/systems/XPManager.js",
+        "src/systems/BadgeManager.js",
+        "src/systems/StreakManager.js",
+        "src/systems/ChallengeEngine.js",
+        "src/systems/CustomizationManager.js",
+        "src/systems/ProgressDashboard.js",
         "src/components/QuizState.js",
         "src/components/FeedbackManager.js",
         "src/components/QuizModal.js",

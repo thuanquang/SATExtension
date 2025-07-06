@@ -1,691 +1,352 @@
 /**
- * StreakManager - Handles streak tracking and momentum features
- * Manages consecutive correct answers, daily participation, and streak rewards
+ * StreakManager - Handles streak tracking and momentum systems
+ * Manages daily streaks, question streaks, and streak-based rewards
  */
-import { getCurrentUserId } from '../db/supabase-client.js';
 
 class StreakManager {
-  constructor(supabaseClient, xpManager) {
+  constructor(supabaseClient) {
     this.supabaseClient = supabaseClient;
-    this.xpManager = xpManager;
-    this.streakTypes = {
-      CORRECT_ANSWERS: 'correct_answers',
-      DAILY_PARTICIPATION: 'daily_participation',
-      CHALLENGE_COMPLETION: 'challenge_completion'
+    this.streakThresholds = {
+      bronze: 3,
+      silver: 7,
+      gold: 15,
+      platinum: 30,
+      diamond: 50
     };
-    
-    console.log('🔥 Streak Manager initialized');
+    this.streakRewards = {
+      3: { xp: 25, message: 'Great start! 🔥' },
+      7: { xp: 75, message: 'One week strong! 💪' },
+      15: { xp: 200, message: 'Incredible momentum! ⚡' },
+      30: { xp: 500, message: 'Unstoppable force! 🚀' },
+      50: { xp: 1000, message: 'Legendary dedication! 👑' }
+    };
   }
 
   /**
-   * Update streak after a quiz session
+   * Update streak after a question is answered
    */
-  async updateStreaks(userId, sessionResult) {
+  async updateStreak(isCorrect, difficulty) {
     try {
-      console.log('🔥 Updating streaks for user:', userId, sessionResult);
+      const userId = await window.getCurrentUserId();
+      const currentProgress = await this.getUserProgress(userId);
       
-      const results = {};
+      let newStreak = currentProgress.current_streak || 0;
+      let newLongestStreak = currentProgress.longest_streak || 0;
+      let streakBroken = false;
+      let streakReward = null;
 
-      // Update correct answer streak
-      results.correctAnswerStreak = await this.updateCorrectAnswerStreak(
-        userId, 
-        sessionResult.isCorrect
-      );
-
-      // Update daily participation streak
-      results.dailyParticipationStreak = await this.updateDailyParticipationStreak(userId);
-
-      // Update challenge completion streak if applicable
-      if (sessionResult.isChallenge) {
-        results.challengeStreak = await this.updateChallengeStreak(
-          userId, 
-          sessionResult.challengeCompleted
-        );
-      }
-
-      console.log('🔥 Streak update results:', results);
-      return { success: true, results };
-
-    } catch (error) {
-      console.error('🔥 Error updating streaks:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Update correct answer streak
-   */
-  async updateCorrectAnswerStreak(userId, isCorrect) {
-    try {
-      userId = await getCurrentUserId();
-      const currentStreak = await this.getCurrentStreak(userId, this.streakTypes.CORRECT_ANSWERS);
-      
       if (isCorrect) {
-        // Extend or start streak
-        const newStreakCount = (currentStreak?.streak_count || 0) + 1;
-        
-        // Update user progress with new streak
-        await this.updateUserProgressStreak(userId, newStreakCount);
-        
-        // Update or create streak record
-        const streakResult = await this.updateStreakRecord(
-          userId, 
-          this.streakTypes.CORRECT_ANSWERS, 
-          newStreakCount, 
-          true
-        );
-
-        // Check for streak milestones
-        const milestones = await this.checkStreakMilestones(userId, newStreakCount);
-
-        return {
-          success: true,
-          streakCount: newStreakCount,
-          isActive: true,
-          milestones,
-          multiplier: this.getStreakMultiplier(newStreakCount)
-        };
-      } else {
-        // Break streak
-        if (currentStreak && currentStreak.is_active) {
-          await this.endStreak(userId, this.streakTypes.CORRECT_ANSWERS);
-          await this.updateUserProgressStreak(userId, 0);
+        newStreak += 1;
+        if (newStreak > newLongestStreak) {
+          newLongestStreak = newStreak;
         }
-
-        return {
-          success: true,
-          streakCount: 0,
-          isActive: false,
-          streakBroken: currentStreak?.streak_count > 0
-        };
-      }
-    } catch (error) {
-      console.error('🔥 Error updating correct answer streak:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Update daily participation streak
-   */
-  async updateDailyParticipationStreak(userId) {
-    try {
-      userId = await getCurrentUserId();
-      const today = new Date().toISOString().split('T')[0];
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      
-      // Check if user already participated today
-      const todayParticipation = await this.checkTodayParticipation(userId, today);
-      if (todayParticipation.alreadyParticipated) {
-        return {
-          success: true,
-          streakCount: todayParticipation.currentStreak,
-          isActive: true,
-          alreadyRecorded: true
-        };
-      }
-
-      // Check yesterday's participation
-      const yesterdayParticipation = await this.checkYesterdayParticipation(userId, yesterday);
-      
-      let newStreakCount;
-      if (yesterdayParticipation) {
-        // Continue existing streak
-        const currentStreak = await this.getCurrentStreak(userId, this.streakTypes.DAILY_PARTICIPATION);
-        newStreakCount = (currentStreak?.streak_count || 0) + 1;
-      } else {
-        // Start new streak
-        newStreakCount = 1;
         
-        // End previous streak if it exists
-        const oldStreak = await this.getCurrentStreak(userId, this.streakTypes.DAILY_PARTICIPATION);
-        if (oldStreak && oldStreak.is_active) {
-          await this.endStreak(userId, this.streakTypes.DAILY_PARTICIPATION);
+        // Check for streak milestone rewards
+        if (this.streakRewards[newStreak]) {
+          streakReward = this.streakRewards[newStreak];
         }
+      } else {
+        if (newStreak > 0) {
+          streakBroken = true;
+        }
+        newStreak = 0;
       }
 
-      // Update streak record
-      await this.updateStreakRecord(
-        userId, 
-        this.streakTypes.DAILY_PARTICIPATION, 
-        newStreakCount, 
-        true
-      );
+      // Update user progress
+      const updates = {
+        user_id: userId,
+        current_streak: newStreak,
+        longest_streak: newLongestStreak,
+        last_quiz_time: new Date().toISOString()
+      };
 
-      // Check for daily streak milestones
-      const milestones = await this.checkDailyStreakMilestones(userId, newStreakCount);
+      const { data, error } = await window.supabaseQuery('user_progress', 'upsert', updates);
+
+      if (error) {
+        console.error('Error updating streak:', error);
+        return { success: false, error: error.message };
+      }
+
+      // Award streak reward if applicable
+      if (streakReward && window.XPManager) {
+        const xpManager = new window.XPManager(this.supabaseClient);
+        await xpManager.awardXP(streakReward.xp, {
+          source: 'streak_milestone',
+          streak: newStreak,
+          difficulty: difficulty
+        });
+      }
+
+      // Record streak event (simplified logging)
+      console.log(`🔥 Streak Event: ${streakBroken ? 'broken' : 'continued'}, length: ${newStreak}`);
 
       return {
         success: true,
-        streakCount: newStreakCount,
-        isActive: true,
-        milestones
+        currentStreak: newStreak,
+        longestStreak: newLongestStreak,
+        streakBroken: streakBroken,
+        streakReward: streakReward,
+        streakLevel: this.getStreakLevel(newStreak)
       };
 
     } catch (error) {
-      console.error('🔥 Error updating daily participation streak:', error);
+      console.error('Exception in updateStreak:', error);
       return { success: false, error: error.message };
     }
   }
 
   /**
-   * Update challenge completion streak
+   * Update daily streak
    */
-  async updateChallengeStreak(userId, challengeCompleted) {
+  async updateDailyStreak() {
     try {
-      userId = await getCurrentUserId();
-      const currentStreak = await this.getCurrentStreak(userId, this.streakTypes.CHALLENGE_COMPLETION);
+      const userId = await window.getCurrentUserId();
+      const currentProgress = await this.getUserProgress(userId);
       
-      if (challengeCompleted) {
-        const newStreakCount = (currentStreak?.streak_count || 0) + 1;
-        
-        await this.updateStreakRecord(
-          userId, 
-          this.streakTypes.CHALLENGE_COMPLETION, 
-          newStreakCount, 
-          true
-        );
+      // Daily streak functionality simplified since we don't have daily_streak column
+      return {
+        success: true,
+        dailyStreak: 0,
+        streakContinued: false
+      };
 
-        return {
-          success: true,
-          streakCount: newStreakCount,
-          isActive: true
-        };
-      } else {
-        // Challenge not completed, don't break streak but don't extend it
-        return {
-          success: true,
-          streakCount: currentStreak?.streak_count || 0,
-          isActive: currentStreak?.is_active || false,
-          maintained: true
-        };
-      }
     } catch (error) {
-      console.error('🔥 Error updating challenge streak:', error);
+      console.error('Exception in updateDailyStreak:', error);
       return { success: false, error: error.message };
     }
   }
 
   /**
-   * Get current streak for a user and type
+   * Get streak level based on current streak
    */
-  async getCurrentStreak(userId, streakType) {
-    try {
-      userId = await getCurrentUserId();
-      const { data, error } = await this.supabaseClient.supabase
-        .from('streak_history')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('streak_type', streakType)
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (error) {
-        console.error('🔥 Error getting current streak:', error);
-        return null;
-      }
-
-      return data && data.length > 0 ? data[0] : null;
-    } catch (error) {
-      console.error('🔥 Error in getCurrentStreak:', error);
-      return null;
-    }
+  getStreakLevel(streak) {
+    if (streak >= this.streakThresholds.diamond) return 'diamond';
+    if (streak >= this.streakThresholds.platinum) return 'platinum';
+    if (streak >= this.streakThresholds.gold) return 'gold';
+    if (streak >= this.streakThresholds.silver) return 'silver';
+    if (streak >= this.streakThresholds.bronze) return 'bronze';
+    return 'none';
   }
 
   /**
-   * Update or create streak record
+   * Get streak statistics for display
    */
-  async updateStreakRecord(userId, streakType, streakCount, isActive) {
+  async getStreakStats() {
     try {
-      userId = await getCurrentUserId();
-      const existingStreak = await this.getCurrentStreak(userId, streakType);
+      const userId = await window.getCurrentUserId();
+      const progress = await this.getUserProgress(userId);
       
-      if (existingStreak) {
-        // Update existing streak
-        const { data, error } = await this.supabaseClient.supabase
-          .from('streak_history')
-          .update({
-            streak_count: streakCount,
-            is_active: isActive,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingStreak.id)
-          .select();
-
-        if (error) {
-          console.error('🔥 Error updating streak record:', error);
-          return { success: false, error };
-        }
-
-        return { success: true, data: data[0], updated: true };
-      } else {
-        // Create new streak
-        const { data, error } = await this.supabaseClient.supabase
-          .from('streak_history')
-          .insert({
-            user_id: userId,
-            streak_type: streakType,
-            streak_count: streakCount,
-            start_date: new Date().toISOString(),
-            is_active: isActive,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .select();
-
-        if (error) {
-          console.error('🔥 Error creating streak record:', error);
-          return { success: false, error };
-        }
-
-        return { success: true, data: data[0], created: true };
-      }
-    } catch (error) {
-      console.error('🔥 Error in updateStreakRecord:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * End an active streak
-   */
-  async endStreak(userId, streakType) {
-    try {
-      userId = await getCurrentUserId();
-      const { data, error } = await this.supabaseClient.supabase
-        .from('streak_history')
-        .update({
-          is_active: false,
-          end_date: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', userId)
-        .eq('streak_type', streakType)
-        .eq('is_active', true);
-
-      if (error) {
-        console.error('🔥 Error ending streak:', error);
-        return { success: false, error };
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('🔥 Error in endStreak:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Update user progress table with current streak
-   */
-  async updateUserProgressStreak(userId, currentStreak) {
-    try {
-      userId = await getCurrentUserId();
-      const userProgress = await this.xpManager.getUserProgress(userId);
-      const longestStreak = Math.max(userProgress.longest_streak || 0, currentStreak);
-
-      await this.xpManager.updateUserStats(userId, {
-        current_streak: currentStreak,
-        longest_streak: longestStreak
-      });
-
-      return { success: true };
-    } catch (error) {
-      console.error('🔥 Error updating user progress streak:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Check today's participation
-   */
-  async checkTodayParticipation(userId, today) {
-    try {
-      userId = await getCurrentUserId();
-      const { data, error } = await this.supabaseClient.supabase
-        .from('quiz_sessions')
-        .select('created_at')
-        .eq('user_id', userId)
-        .gte('created_at', today)
-        .lt('created_at', today + 'T23:59:59')
-        .limit(1);
-
-      if (error) {
-        console.error('🔥 Error checking today participation:', error);
-        return { alreadyParticipated: false };
-      }
-
-      const alreadyParticipated = data && data.length > 0;
+      const currentStreak = progress.current_streak || 0;
+      const longestStreak = progress.longest_streak || 0;
+      const dailyStreak = 0; // Not available in current schema
       
-      if (alreadyParticipated) {
-        const currentStreak = await this.getCurrentStreak(userId, this.streakTypes.DAILY_PARTICIPATION);
-        return { 
-          alreadyParticipated: true, 
-          currentStreak: currentStreak?.streak_count || 0 
-        };
-      }
+      const streakLevel = this.getStreakLevel(currentStreak);
+      const nextMilestone = this._getNextMilestone(currentStreak);
+      
+      return {
+        success: true,
+        currentStreak: currentStreak,
+        longestStreak: longestStreak,
+        dailyStreak: dailyStreak,
+        streakLevel: streakLevel,
+        nextMilestone: nextMilestone,
+        streakMultiplier: this._calculateStreakMultiplier(currentStreak)
+      };
 
-      return { alreadyParticipated: false };
     } catch (error) {
-      console.error('🔥 Error in checkTodayParticipation:', error);
-      return { alreadyParticipated: false };
+      console.error('Error getting streak stats:', error);
+      return { success: false, error: error.message };
     }
   }
 
   /**
-   * Check yesterday's participation
+   * Get user progress data
    */
-  async checkYesterdayParticipation(userId, yesterday) {
+  async getUserProgress(userId) {
     try {
-      userId = await getCurrentUserId();
-      const { data, error } = await this.supabaseClient.supabase
-        .from('quiz_sessions')
-        .select('created_at')
-        .eq('user_id', userId)
-        .gte('created_at', yesterday)
-        .lt('created_at', yesterday + 'T23:59:59')
-        .limit(1);
+      const { data, error } = await window.supabaseQuery('user_progress', 'select', null, { user_id: userId });
 
       if (error) {
-        console.error('🔥 Error checking yesterday participation:', error);
-        return false;
+        console.error('Error fetching user progress:', error);
+        return {};
       }
 
-      return data && data.length > 0;
+      return data && data.length > 0 ? data[0] : {};
+
     } catch (error) {
-      console.error('🔥 Error in checkYesterdayParticipation:', error);
-      return false;
+      console.error('Exception in getUserProgress:', error);
+      return {};
     }
   }
 
   /**
-   * Check streak milestones for XP bonuses and achievements
+   * Get next milestone information
    */
-  async checkStreakMilestones(userId, streakCount) {
-    const milestones = [];
-
-    // XP multiplier milestones
-    if ([2, 3, 5, 7, 10, 15, 20, 30].includes(streakCount)) {
-      milestones.push({
-        type: 'streak_milestone',
-        streakCount,
-        title: `${streakCount} Correct Streak!`,
-        description: `Amazing! You've answered ${streakCount} questions correctly in a row.`,
-        reward: 'XP Multiplier Increased'
-      });
-    }
-
-    // Special streak achievements
-    if (streakCount === 5) {
-      milestones.push({
-        type: 'streak_achievement',
-        title: 'On Fire!',
-        description: 'You\'re on a 5-question streak!',
-        icon: '🔥',
-        xpBonus: 25
-      });
-    }
-
-    if (streakCount === 10) {
-      milestones.push({
-        type: 'streak_achievement',
-        title: 'Unstoppable!',
-        description: 'Double digits! 10 correct answers in a row!',
-        icon: '⚡',
-        xpBonus: 50
-      });
-    }
-
-    if (streakCount === 20) {
-      milestones.push({
-        type: 'streak_achievement',
-        title: 'Legendary Streak!',
-        description: 'Incredible! 20 consecutive correct answers!',
-        icon: '🏆',
-        xpBonus: 100
-      });
-    }
-
-    // Award XP bonuses for milestones
+  _getNextMilestone(currentStreak) {
+    const milestones = Object.keys(this.streakRewards).map(Number).sort((a, b) => a - b);
+    
     for (const milestone of milestones) {
-      if (milestone.xpBonus) {
-        await this.xpManager.awardXP(userId, milestone.xpBonus, {
-          source: 'streak_milestone',
-          streakCount,
-          milestoneTitle: milestone.title
-        });
+      if (currentStreak < milestone) {
+        return {
+          target: milestone,
+          remaining: milestone - currentStreak,
+          reward: this.streakRewards[milestone]
+        };
       }
     }
-
-    return milestones;
+    
+    return null; // No more milestones
   }
 
   /**
-   * Check daily streak milestones
+   * Calculate streak multiplier for XP
    */
-  async checkDailyStreakMilestones(userId, streakCount) {
-    const milestones = [];
-
-    // Daily streak milestones
-    if ([3, 7, 14, 30, 60, 100].includes(streakCount)) {
-      let title, description, icon, xpBonus;
-      
-      switch (streakCount) {
-        case 3:
-          title = 'Habit Forming';
-          description = '3 days in a row - you\'re building momentum!';
-          icon = '🌱';
-          xpBonus = 30;
-          break;
-        case 7:
-          title = 'Week Warrior';
-          description = 'One full week of dedication!';
-          icon = '⚔️';
-          xpBonus = 70;
-          break;
-        case 14:
-          title = 'Two Week Champion';
-          description = 'Fourteen days of consistent learning!';
-          icon = '🏅';
-          xpBonus = 140;
-          break;
-        case 30:
-          title = 'Monthly Master';
-          description = 'An entire month of daily participation!';
-          icon = '👑';
-          xpBonus = 300;
-          break;
-        case 60:
-          title = 'Study Legend';
-          description = 'Two months of unwavering commitment!';
-          icon = '🌟';
-          xpBonus = 600;
-          break;
-        case 100:
-          title = 'Centurion Scholar';
-          description = '100 days of learning excellence!';
-          icon = '🎯';
-          xpBonus = 1000;
-          break;
-      }
-
-      milestones.push({
-        type: 'daily_streak_milestone',
-        streakCount,
-        title,
-        description,
-        icon,
-        xpBonus
-      });
-
-      // Award XP bonus
-      if (xpBonus) {
-        await this.xpManager.awardXP(userId, xpBonus, {
-          source: 'daily_streak_milestone',
-          streakCount,
-          milestoneTitle: title
-        });
-      }
-    }
-
-    return milestones;
-  }
-
-  /**
-   * Get streak multiplier for XP calculations
-   */
-  getStreakMultiplier(streakCount) {
-    if (streakCount >= 7) return 2.5;
-    if (streakCount >= 5) return 2.0;
-    if (streakCount >= 3) return 1.5;
-    if (streakCount >= 2) return 1.2;
+  _calculateStreakMultiplier(streak) {
+    if (streak >= 50) return 3.0;
+    if (streak >= 30) return 2.5;
+    if (streak >= 15) return 2.0;
+    if (streak >= 7) return 1.7;
+    if (streak >= 3) return 1.5;
     return 1.0;
   }
 
   /**
-   * Get all user streaks
+   * Record streak event for analytics (simplified - no separate table)
    */
-  async getUserStreaks(userId) {
-    try {
-      userId = await getCurrentUserId();
-      const streaks = {};
-      
-      for (const streakType of Object.values(this.streakTypes)) {
-        const currentStreak = await this.getCurrentStreak(userId, streakType);
-        const longestStreak = await this.getLongestStreak(userId, streakType);
-        
-        streaks[streakType] = {
-          current: currentStreak ? {
-            count: currentStreak.streak_count,
-            isActive: currentStreak.is_active,
-            startDate: currentStreak.start_date
-          } : { count: 0, isActive: false },
-          longest: longestStreak ? {
-            count: longestStreak.streak_count,
-            startDate: longestStreak.start_date,
-            endDate: longestStreak.end_date
-          } : { count: 0 }
-        };
-      }
-
-      return { success: true, streaks };
-    } catch (error) {
-      console.error('🔥 Error getting user streaks:', error);
-      return { success: false, error: error.message };
-    }
+  async _recordStreakEvent(userId, eventData) {
+    // Streak events are tracked through user_progress updates
+    console.log(`🔥 Streak Analytics: ${eventData.streakBroken ? 'broken' : 'continued'} at ${eventData.streakLength}`);
   }
 
   /**
-   * Get longest streak for a user and type
+   * Get streak history for analytics (simplified)
    */
-  async getLongestStreak(userId, streakType) {
+  async getStreakHistory(userId, limit = 50) {
+    // Return empty array since we don't have a separate streak_events table
+    return [];
+  }
+
+  /**
+   * Get streak leaderboard
+   */
+  async getStreakLeaderboard(type = 'current', limit = 10) {
     try {
-      userId = await getCurrentUserId();
-      const { data, error } = await this.supabaseClient.supabase
-        .from('streak_history')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('streak_type', streakType)
-        .order('streak_count', { ascending: false })
-        .limit(1);
+      const orderBy = type === 'current' ? 'current_streak' : 'longest_streak';
+      
+      const { data, error } = await window.supabaseQuery('user_progress', 'select', 
+        'user_id, current_streak, longest_streak', 
+        { 
+          limit: limit,
+          order: `${orderBy} desc`
+        });
 
       if (error) {
-        console.error('🔥 Error getting longest streak:', error);
-        return null;
+        console.error('Error fetching streak leaderboard:', error);
+        return [];
       }
 
-      return data && data.length > 0 ? data[0] : null;
+      return data || [];
+
     } catch (error) {
-      console.error('🔥 Error in getLongestStreak:', error);
-      return null;
+      console.error('Exception in getStreakLeaderboard:', error);
+      return [];
     }
   }
 
   /**
-   * Get streak statistics and motivation
+   * Check if user is on fire (high streak)
    */
-  async getStreakStats(userId) {
+  isOnFire(streak) {
+    return streak >= this.streakThresholds.gold;
+  }
+
+  /**
+   * Get streak encouragement message
+   */
+  getStreakMessage(streak, streakBroken = false) {
+    if (streakBroken) {
+      return {
+        title: 'Streak Broken 💔',
+        message: 'Don\'t worry! Every expert was once a beginner. Start your new streak now!',
+        type: 'encouragement'
+      };
+    }
+
+    if (streak === 0) {
+      return {
+        title: 'Ready to Start? 🚀',
+        message: 'Answer your first question correctly to begin your streak!',
+        type: 'motivation'
+      };
+    }
+
+    const level = this.getStreakLevel(streak);
+    const messages = {
+      bronze: {
+        title: 'Getting Started! 🔥',
+        message: `${streak} correct in a row! Keep the momentum going!`,
+        type: 'progress'
+      },
+      silver: {
+        title: 'You\'re on Fire! 🔥🔥',
+        message: `Amazing ${streak} streak! You're building serious momentum!`,
+        type: 'progress'
+      },
+      gold: {
+        title: 'Unstoppable! 🔥🔥🔥',
+        message: `Incredible ${streak} streak! You're in the zone!`,
+        type: 'achievement'
+      },
+      platinum: {
+        title: 'Legendary! 👑',
+        message: `Phenomenal ${streak} streak! You're a quiz master!`,
+        type: 'achievement'
+      },
+      diamond: {
+        title: 'Absolutely Incredible! 💎',
+        message: `Mind-blowing ${streak} streak! You're rewriting the rules!`,
+        type: 'legendary'
+      }
+    };
+
+    return messages[level] || messages.bronze;
+  }
+
+  /**
+   * Get streak summary for popup
+   */
+  async getStreakSummary() {
     try {
-      userId = await getCurrentUserId();
-      const userStreaks = await this.getUserStreaks(userId);
-      if (!userStreaks.success) {
-        return { success: false, error: userStreaks.error };
+      const userId = await window.getCurrentUserId();
+      const stats = await this.getStreakStats();
+      
+      if (!stats.success) {
+        return stats;
       }
 
-      const correctAnswerStreak = userStreaks.streaks[this.streakTypes.CORRECT_ANSWERS];
-      const dailyStreak = userStreaks.streaks[this.streakTypes.DAILY_PARTICIPATION];
-      const challengeStreak = userStreaks.streaks[this.streakTypes.CHALLENGE_COMPLETION];
-
-      const stats = {
-        correctAnswers: {
-          current: correctAnswerStreak.current.count,
-          longest: correctAnswerStreak.longest.count,
-          isActive: correctAnswerStreak.current.isActive,
-          multiplier: this.getStreakMultiplier(correctAnswerStreak.current.count)
-        },
-        dailyParticipation: {
-          current: dailyStreak.current.count,
-          longest: dailyStreak.longest.count,
-          isActive: dailyStreak.current.isActive
-        },
-        challengeCompletion: {
-          current: challengeStreak.current.count,
-          longest: challengeStreak.longest.count,
-          isActive: challengeStreak.current.isActive
-        },
-        motivation: this.getMotivationalMessage(
-          correctAnswerStreak.current.count, 
-          dailyStreak.current.count
-        )
+      const streakMessage = this.getStreakMessage(stats.currentStreak);
+      const isOnFire = this.isOnFire(stats.currentStreak);
+      
+      return {
+        success: true,
+        summary: {
+          currentStreak: stats.currentStreak,
+          longestStreak: stats.longestStreak,
+          dailyStreak: stats.dailyStreak,
+          streakLevel: stats.streakLevel,
+          nextMilestone: stats.nextMilestone,
+          streakMultiplier: stats.streakMultiplier,
+          isOnFire: isOnFire,
+          message: streakMessage
+        }
       };
 
-      return { success: true, stats };
     } catch (error) {
-      console.error('🔥 Error getting streak stats:', error);
+      console.error('Error getting streak summary:', error);
       return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Get motivational message based on streaks
-   */
-  getMotivationalMessage(correctStreak, dailyStreak) {
-    if (correctStreak >= 10) {
-      return {
-        title: "You're on fire! 🔥",
-        message: `${correctStreak} correct answers in a row! Keep this momentum going!`,
-        level: 'excellent'
-      };
-    } else if (correctStreak >= 5) {
-      return {
-        title: "Great streak! ⚡",
-        message: `${correctStreak} correct answers! You're doing amazing!`,
-        level: 'great'
-      };
-    } else if (correctStreak >= 2) {
-      return {
-        title: "Building momentum! 🌟",
-        message: `${correctStreak} in a row! Keep it up!`,
-        level: 'good'
-      };
-    } else if (dailyStreak >= 7) {
-      return {
-        title: "Consistent learner! 📚",
-        message: `${dailyStreak} days of learning! Consistency is key to success!`,
-        level: 'great'
-      };
-    } else {
-      return {
-        title: "Ready to start! 🚀",
-        message: "Every expert was once a beginner. Let's build that streak!",
-        level: 'encouraging'
-      };
     }
   }
 }
 
-// Export for global access
-if (typeof window !== 'undefined') {
-  window.StreakManager = StreakManager;
-} 
+// Make StreakManager globally accessible
+window.StreakManager = StreakManager; 

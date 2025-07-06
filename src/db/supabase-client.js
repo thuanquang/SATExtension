@@ -36,19 +36,37 @@ window.supabaseQuery = async function(table, operation, data = null, filters = n
     
     if (operation === 'select') {
       if (filters) {
-        const filterString = Object.entries(filters)
-          .map(([key, value]) => `${key}=eq.${value}`)
-          .join('&');
-        url += `?${filterString}`;
+        const filterParams = new URLSearchParams();
+        Object.entries(filters).forEach(([key, value]) => {
+          if (key === 'limit') {
+            filterParams.append('limit', value);
+          } else if (key === 'order') {
+            filterParams.append('order', value);
+          } else {
+            filterParams.append(key, `eq.${value}`);
+          }
+        });
+        url += `?${filterParams.toString()}`;
       }
     } else if (operation === 'insert') {
       method = 'POST';
       body = JSON.stringify(Array.isArray(data) ? data : [data]);
     } else if (operation === 'upsert') {
       method = 'POST';
-      headers['Prefer'] = 'resolution=merge-duplicates';
+      headers['Prefer'] = 'resolution=merge-duplicates,return=representation';
       body = JSON.stringify(Array.isArray(data) ? data : [data]);
+    } else if (operation === 'update') {
+      method = 'PATCH';
+      body = JSON.stringify(data);
+      if (filters) {
+        const filterString = Object.entries(filters)
+          .map(([key, value]) => `${key}=eq.${value}`)
+          .join('&');
+        url += `?${filterString}`;
+      }
     }
+    
+    console.log(`🔍 Supabase Query: ${operation} on ${table}`, { url, method, body, headers });
     
     const response = await fetch(url, {
       method,
@@ -57,10 +75,13 @@ window.supabaseQuery = async function(table, operation, data = null, filters = n
     });
     
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`🚨 Supabase HTTP error! status: ${response.status}, body: ${errorText}`);
+      throw new Error(`HTTP error! status: ${response.status}, details: ${errorText}`);
     }
     
     const result = await response.json();
+    console.log(`✅ Supabase Query successful:`, result);
     return { data: result, error: null };
   } catch (error) {
     console.error('Supabase query error:', error);

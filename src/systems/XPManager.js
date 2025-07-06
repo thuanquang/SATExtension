@@ -1,406 +1,370 @@
 /**
- * XPManager - Handles experience points, levels, and progression
- * Core gamification system for tracking user advancement
+ * XPManager - Handles XP calculation, leveling, and progression
+ * Integrates with user progress tracking and provides level-based benefits
  */
-import { getCurrentUserId } from '../db/supabase-client.js';
 
 class XPManager {
   constructor(supabaseClient) {
     this.supabaseClient = supabaseClient;
-    this.xpRates = {
-      easy: 10,
-      medium: 15,
-      hard: 25
-    };
-    this.streakMultipliers = {
-      2: 1.2,
-      3: 1.5,
-      5: 2.0,
-      7: 2.5 // Maximum multiplier
-    };
-    this.bonusConditions = {
-      firstAttempt: 0.5, // +50% XP
-      speedBonus: 0.25,  // +25% XP for <30s answers
-      perfectDay: 100,   // Flat bonus XP
-      weeklyConsistency: 200 // Flat bonus XP
-    };
-    
-    console.log('🎯 XP Manager initialized');
+    this.levelThresholds = this._calculateLevelThresholds();
   }
 
   /**
-   * Calculate XP for a completed question
+   * Calculate XP thresholds for each level
+   * Progressive difficulty: 1-5 (100 XP each), 6-10 (200 XP each), etc.
    */
-  async calculateQuestionXP(difficulty, attempts, timeToAnswer, currentStreak) {
-    // Base XP from difficulty
-    let baseXP = this.xpRates[difficulty.toLowerCase()] || this.xpRates.medium;
+  _calculateLevelThresholds() {
+    const thresholds = [0]; // Level 1 starts at 0 XP
+    let currentXP = 0;
+    
+    for (let level = 2; level <= 50; level++) {
+      if (level <= 5) {
+        currentXP += 100;
+      } else if (level <= 10) {
+        currentXP += 200;
+      } else if (level <= 15) {
+        currentXP += 300;
+      } else if (level <= 20) {
+        currentXP += 400;
+      } else {
+        currentXP += 500;
+      }
+      thresholds.push(currentXP);
+    }
+    
+    return thresholds;
+  }
+
+  /**
+   * Get user's current progress including XP, level, and next level requirements
+   */
+  async getUserProgress() {
+    try {
+      const userId = await window.getCurrentUserId();
+      
+      const { data, error } = await window.supabaseQuery('user_progress', 'select', null, { user_id: userId });
+      
+      if (error) {
+        console.error('Error fetching user progress:', error);
+        return this._getDefaultProgress();
+      }
+      
+      if (!data || data.length === 0) {
+        // Initialize user progress if not exists
+        return await this.initializeUserProgress();
+      }
+      
+      const progress = data[0];
+      return this._enrichProgressData(progress);
+      
+    } catch (error) {
+      console.error('Exception in getUserProgress:', error);
+      return this._getDefaultProgress();
+    }
+  }
+
+  /**
+   * Initialize user progress with default values
+   */
+  async initializeUserProgress() {
+    try {
+      const userId = await window.getCurrentUserId();
+      
+      const defaultProgress = {
+        user_id: userId,
+        total_xp: 0,
+        current_level: 1,
+        questions_answered: 0,
+        questions_correct: 0,
+        current_streak: 0,
+        longest_streak: 0,
+        last_quiz_time: new Date().toISOString()
+      };
+      
+      const { data, error } = await window.supabaseQuery('user_progress', 'upsert', defaultProgress);
+      
+      if (error) {
+        console.error('Error initializing user progress:', error);
+        return this._getDefaultProgress();
+      }
+      
+      return this._enrichProgressData(defaultProgress);
+      
+    } catch (error) {
+      console.error('Exception in initializeUserProgress:', error);
+      return this._getDefaultProgress();
+    }
+  }
+
+  /**
+   * Award XP to user and handle level ups
+   */
+  async awardXP(xpAmount, context = {}) {
+    try {
+      const userId = await window.getCurrentUserId();
+      const currentProgress = await this.getUserProgress();
+      
+      const newTotalXP = currentProgress.totalXP + xpAmount;
+      const newLevel = this.calculateLevelFromXP(newTotalXP);
+      const leveledUp = newLevel > currentProgress.currentLevel;
+      
+      // Update user progress
+      const updatedProgress = {
+        user_id: userId,
+        total_xp: newTotalXP,
+        current_level: newLevel,
+        last_quiz_time: new Date().toISOString()
+      };
+      
+      const { data, error } = await window.supabaseQuery('user_progress', 'upsert', updatedProgress);
+      
+      if (error) {
+        console.error('Error awarding XP:', error);
+        return { success: false, error: error.message };
+      }
+      
+      // XP transaction recorded successfully
+      
+      const result = {
+        success: true,
+        xpGained: xpAmount,
+        newTotalXP: newTotalXP,
+        newLevel: newLevel,
+        leveledUp: leveledUp,
+        previousLevel: currentProgress.currentLevel
+      };
+      
+      if (leveledUp) {
+        result.levelUpRewards = await this._processLevelUpRewards(newLevel);
+      }
+      
+      return result;
+      
+    } catch (error) {
+      console.error('Exception in awardXP:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Calculate XP for a specific question based on various factors
+   */
+  calculateQuestionXP(difficulty, attempts, timeToAnswer, currentStreak) {
+    // Base XP by difficulty
+    const baseXP = {
+      'easy': 10,
+      'medium': 15,
+      'hard': 25
+    };
+    
+    let xp = baseXP[difficulty] || 15;
     
     // First attempt bonus
     if (attempts === 1) {
-      baseXP *= (1 + this.bonusConditions.firstAttempt);
+      xp = Math.floor(xp * 1.5);
+    } else if (attempts === 2) {
+      xp = Math.floor(xp * 1.2);
     }
+    // No bonus for 3+ attempts
     
-    // Speed bonus (under 30 seconds)
-    if (timeToAnswer && timeToAnswer < 30000) {
-      baseXP *= (1 + this.bonusConditions.speedBonus);
+    // Speed bonus (if answered quickly)
+    if (timeToAnswer && timeToAnswer < 30000) { // Less than 30 seconds
+      xp = Math.floor(xp * 1.3);
+    } else if (timeToAnswer && timeToAnswer < 60000) { // Less than 1 minute
+      xp = Math.floor(xp * 1.1);
     }
     
     // Streak multiplier
     const streakMultiplier = this.getStreakMultiplier(currentStreak);
-    baseXP *= streakMultiplier;
+    xp = Math.floor(xp * streakMultiplier);
     
-    return Math.floor(baseXP);
+    return Math.max(xp, 1); // Minimum 1 XP
   }
 
   /**
    * Get streak multiplier based on current streak
    */
   getStreakMultiplier(streak) {
-    if (streak >= 7) return this.streakMultipliers[7];
-    if (streak >= 5) return this.streakMultipliers[5];
-    if (streak >= 3) return this.streakMultipliers[3];
-    if (streak >= 2) return this.streakMultipliers[2];
+    if (streak >= 10) return 2.5;
+    if (streak >= 7) return 2.0;
+    if (streak >= 5) return 1.7;
+    if (streak >= 3) return 1.5;
+    if (streak >= 2) return 1.2;
     return 1.0;
   }
 
   /**
    * Calculate level from total XP
    */
-  calculateLevel(totalXP) {
-    if (totalXP < 500) {
-      return Math.floor(totalXP / 100) + 1;
-    } else if (totalXP < 1500) {
-      return Math.floor((totalXP - 500) / 200) + 6;
-    } else if (totalXP < 3000) {
-      return Math.floor((totalXP - 1500) / 300) + 11;
-    } else if (totalXP < 5000) {
-      return Math.floor((totalXP - 3000) / 400) + 16;
-    } else {
-      return Math.floor((totalXP - 5000) / 500) + 21;
+  calculateLevelFromXP(totalXP) {
+    for (let level = this.levelThresholds.length - 1; level >= 1; level--) {
+      if (totalXP >= this.levelThresholds[level]) {
+        return level;
+      }
     }
+    return 1;
   }
 
   /**
-   * Calculate XP required for a specific level
+   * Get XP required for a specific level
    */
   getXPForLevel(level) {
-    if (level <= 5) {
-      return (level - 1) * 100;
-    } else if (level <= 10) {
-      return 500 + ((level - 6) * 200);
-    } else if (level <= 15) {
-      return 1500 + ((level - 11) * 300);
-    } else if (level <= 20) {
-      return 3000 + ((level - 16) * 400);
-    } else {
-      return 5000 + ((level - 21) * 500);
+    return this.levelThresholds[level] || this.levelThresholds[this.levelThresholds.length - 1];
+  }
+
+  /**
+   * Get XP summary for popup display
+   */
+  async getXPSummary() {
+    try {
+      const progress = await this.getUserProgress();
+      const currentLevelXP = this.getXPForLevel(progress.currentLevel);
+      const nextLevelXP = this.getXPForLevel(progress.currentLevel + 1);
+      const progressXP = progress.totalXP - currentLevelXP;
+      const requiredXP = nextLevelXP - currentLevelXP;
+      
+      return {
+        success: true,
+        totalXP: progress.totalXP,
+        currentLevel: progress.currentLevel,
+        progressXP: progressXP,
+        requiredXP: requiredXP,
+        progressPercentage: (progressXP / requiredXP) * 100,
+        nextLevelXP: nextLevelXP,
+        streakMultiplier: this.getStreakMultiplier(progress.currentStreak)
+      };
+      
+    } catch (error) {
+      console.error('Error getting XP summary:', error);
+      return { success: false, error: error.message };
     }
   }
 
   /**
-   * Get level progress information
+   * Update user stats (questions answered, correct answers, etc.)
    */
-  getLevelProgress(totalXP) {
-    const currentLevel = this.calculateLevel(totalXP);
-    const currentLevelXP = this.getXPForLevel(currentLevel);
-    const nextLevelXP = this.getXPForLevel(currentLevel + 1);
-    const progressXP = totalXP - currentLevelXP;
-    const requiredXP = nextLevelXP - currentLevelXP;
-    const progressPercentage = (progressXP / requiredXP) * 100;
+  async updateUserStats(isCorrect, difficulty) {
+    try {
+      const userId = await window.getCurrentUserId();
+      const currentProgress = await this.getUserProgress();
+      
+      const updates = {
+        user_id: userId,
+        questions_answered: currentProgress.questionsAnswered + 1,
+        last_quiz_time: new Date().toISOString()
+      };
+      
+      if (isCorrect) {
+        updates.questions_correct = currentProgress.correctAnswers + 1;
+      }
+      
+      const { data, error } = await window.supabaseQuery('user_progress', 'upsert', updates);
+      
+      if (error) {
+        console.error('Error updating user stats:', error);
+        return { success: false, error: error.message };
+      }
+      
+      return { success: true, data: updates };
+      
+    } catch (error) {
+      console.error('Exception in updateUserStats:', error);
+      return { success: false, error: error.message };
+    }
+  }
 
+  /**
+   * Record XP transaction for analytics (simplified - no separate table)
+   */
+  async _recordXPTransaction(userId, xpAmount, context) {
+    // XP transactions are tracked through user_progress updates
+    console.log(`🎮 XP Transaction: +${xpAmount} XP for ${context.source || 'unknown'}`);
+  }
+
+  /**
+   * Process level up rewards
+   */
+  async _processLevelUpRewards(newLevel) {
+    const rewards = {
+      themeUnlocks: [],
+      bonusXP: 0,
+      specialRewards: []
+    };
+    
+    // Theme unlocks at specific levels
+    const themeUnlocks = {
+      3: 'midnight_scholar',
+      5: 'forest_focus',
+      8: 'ocean_depths',
+      12: 'sunset_study',
+      15: 'galaxy_genius',
+      20: 'rainbow_master',
+      25: 'custom_creator'
+    };
+    
+    if (themeUnlocks[newLevel]) {
+      rewards.themeUnlocks.push(themeUnlocks[newLevel]);
+    }
+    
+    // Bonus XP for major milestones
+    if (newLevel % 5 === 0) {
+      rewards.bonusXP = newLevel * 5;
+    }
+    
+    // Special rewards
+    if (newLevel === 10) {
+      rewards.specialRewards.push('Extended focus time (45 minutes)');
+    } else if (newLevel === 20) {
+      rewards.specialRewards.push('Hint tokens unlocked');
+    }
+    
+    return rewards;
+  }
+
+  /**
+   * Enrich progress data with calculated fields
+   */
+  _enrichProgressData(progress) {
+    const currentLevelXP = this.getXPForLevel(progress.current_level);
+    const nextLevelXP = this.getXPForLevel(progress.current_level + 1);
+    const progressXP = progress.total_xp - currentLevelXP;
+    const requiredXP = nextLevelXP - currentLevelXP;
+    
     return {
-      currentLevel,
-      totalXP,
-      progressXP,
-      requiredXP,
-      nextLevelXP,
-      progressPercentage: Math.min(100, Math.max(0, progressPercentage))
+      ...progress,
+      totalXP: progress.total_xp,
+      currentLevel: progress.current_level,
+      questionsAnswered: progress.questions_answered,
+      correctAnswers: progress.questions_correct,
+      currentStreak: progress.current_streak,
+      longestStreak: progress.longest_streak,
+      progressXP: progressXP,
+      requiredXP: requiredXP,
+      progressPercentage: (progressXP / requiredXP) * 100,
+      nextLevelXP: nextLevelXP,
+      accuracy: progress.questions_answered > 0 ? (progress.questions_correct / progress.questions_answered) * 100 : 0
     };
   }
 
   /**
-   * Award XP to user and update database
+   * Get default progress for error cases
    */
-  async awardXP(userId, xpAmount, context = {}) {
-    try {
-      console.log('🎯 Awarding XP:', { userId, xpAmount, context });
-
-      // Get current user progress
-      userId = await getCurrentUserId();
-      const currentProgress = await this.getUserProgress(userId);
-      const newTotalXP = (currentProgress.total_xp || 0) + xpAmount;
-      const newLevel = this.calculateLevel(newTotalXP);
-      const oldLevel = currentProgress.current_level || 1;
-      const leveledUp = newLevel > oldLevel;
-
-      // Update user progress
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_progress')
-        .upsert({
-          user_id: userId,
-          total_xp: newTotalXP,
-          current_level: newLevel,
-          updated_at: new Date().toISOString()
-        })
-        .select();
-
-      if (error) {
-        console.error('🎯 Error awarding XP:', error);
-        return { success: false, error };
-      }
-
-      // Log the XP gain
-      await this.logXPGain(userId, xpAmount, context);
-
-      console.log('🎯 XP awarded successfully:', {
-        xpGained: xpAmount,
-        newTotalXP,
-        oldLevel,
-        newLevel,
-        leveledUp
-      });
-
-      return {
-        success: true,
-        xpGained: xpAmount,
-        newTotalXP,
-        oldLevel,
-        newLevel,
-        leveledUp,
-        levelProgress: this.getLevelProgress(newTotalXP)
-      };
-
-    } catch (error) {
-      console.error('🎯 Error in awardXP:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Get user progress data
-   */
-  async getUserProgress(userId) {
-    try {
-      userId = await getCurrentUserId();
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_progress')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // Not found error
-        console.error('🎯 Error getting user progress:', error);
-        return {};
-      }
-
-      return data || {};
-    } catch (error) {
-      console.error('🎯 Error in getUserProgress:', error);
-      return {};
-    }
-  }
-
-  /**
-   * Initialize user progress if not exists
-   */
-  async initializeUserProgress(userId) {
-    try {
-      userId = await getCurrentUserId();
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_progress')
-        .upsert({
-          user_id: userId,
-          total_xp: 0,
-          current_level: 1,
-          questions_answered: 0,
-          questions_correct: 0,
-          total_attempts: 0,
-          current_streak: 0,
-          longest_streak: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .select();
-
-      if (error) {
-        console.error('🎯 Error initializing user progress:', error);
-        return { success: false, error };
-      }
-
-      console.log('🎯 User progress initialized:', userId);
-      return { success: true, data };
-    } catch (error) {
-      console.error('🎯 Error in initializeUserProgress:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Update user statistics
-   */
-  async updateUserStats(userId, stats) {
-    try {
-      userId = await getCurrentUserId();
-      const updates = {
-        user_id: userId,
-        updated_at: new Date().toISOString(),
-        ...stats
-      };
-
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_progress')
-        .upsert(updates)
-        .select();
-
-      if (error) {
-        console.error('🎯 Error updating user stats:', error);
-        return { success: false, error };
-      }
-
-      return { success: true, data };
-    } catch (error) {
-      console.error('🎯 Error in updateUserStats:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Log XP gain for analytics
-   */
-  async logXPGain(userId, xpAmount, context) {
-    try {
-      userId = await getCurrentUserId();
-      const sessionData = {
-        user_id: userId,
-        session_context: {
-          xp_gained: xpAmount,
-          source: context.source || 'question_completion',
-          difficulty: context.difficulty,
-          streak_multiplier: context.streakMultiplier,
-          bonus_type: context.bonusType,
-          timestamp: new Date().toISOString()
-        },
-        created_at: new Date().toISOString()
-      };
-
-      // We'll log this as part of quiz session data
-      // This will be useful for analytics later
-      console.log('🎯 XP gain logged:', sessionData);
-      
-    } catch (error) {
-      console.error('🎯 Error logging XP gain:', error);
-    }
-  }
-
-  /**
-   * Get leaderboard data
-   */
-  async getLeaderboardData(leaderboardType = 'weekly_xp', limit = 10) {
-    try {
-      const { data, error } = await this.supabaseClient.supabase
-        .from('leaderboard_entries')
-        .select('*')
-        .eq('leaderboard_type', leaderboardType)
-        .order('rank_position', { ascending: true })
-        .limit(limit);
-
-      if (error) {
-        console.error('🎯 Error getting leaderboard:', error);
-        return [];
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error('🎯 Error in getLeaderboardData:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Calculate daily bonus XP
-   */
-  calculateDailyBonus(perfectDay, weeklyConsistency) {
-    let bonusXP = 0;
-    
-    if (perfectDay) {
-      bonusXP += this.bonusConditions.perfectDay;
-    }
-    
-    if (weeklyConsistency) {
-      bonusXP += this.bonusConditions.weeklyConsistency;
-    }
-    
-    return bonusXP;
-  }
-
-  /**
-   * Get level benefits/unlocks
-   */
-  getLevelBenefits(level) {
-    const benefits = [];
-    
-    // Theme unlocks
-    if (level >= 3) benefits.push('Classic Scholar theme');
-    if (level >= 6) benefits.push('Night Owl theme');
-    if (level >= 9) benefits.push('Minimalist theme');
-    if (level >= 12) benefits.push('Nature Scholar theme');
-    if (level >= 15) benefits.push('Tech Wizard theme');
-    if (level >= 18) benefits.push('Artistic Mind theme');
-    if (level >= 21) benefits.push('Custom Creator theme');
-
-    // Functional benefits
-    if (level >= 5) benefits.push('Extended focus time (+5 minutes)');
-    if (level >= 10) benefits.push('Hint tokens (2 per week)');
-    if (level >= 15) benefits.push('Skip passes (1 per month)');
-    if (level >= 20) benefits.push('Advanced analytics dashboard');
-
-    // Avatar customizations
-    if (level >= 4) benefits.push('Avatar accessories');
-    if (level >= 7) benefits.push('Special avatar poses');
-    if (level >= 11) benefits.push('Avatar backgrounds');
-    if (level >= 16) benefits.push('Animated avatar elements');
-
-    return benefits;
-  }
-
-  /**
-   * Check if user has leveled up
-   */
-  hasLeveledUp(oldXP, newXP) {
-    const oldLevel = this.calculateLevel(oldXP);
-    const newLevel = this.calculateLevel(newXP);
-    return newLevel > oldLevel;
-  }
-
-  /**
-   * Get comprehensive XP summary
-   */
-  async getXPSummary(userId) {
-    try {
-      userId = await getCurrentUserId();
-      const progress = await this.getUserProgress(userId);
-      const levelProgress = this.getLevelProgress(progress.total_xp || 0);
-      const benefits = this.getLevelBenefits(levelProgress.currentLevel);
-
-      return {
-        ...levelProgress,
-        questionsAnswered: progress.questions_answered || 0,
-        questionsCorrect: progress.questions_correct || 0,
-        currentStreak: progress.current_streak || 0,
-        longestStreak: progress.longest_streak || 0,
-        levelBenefits: benefits,
-        accuracy: progress.questions_answered > 0 
-          ? ((progress.questions_correct / progress.questions_answered) * 100).toFixed(1)
-          : 0
-      };
-    } catch (error) {
-      console.error('🎯 Error getting XP summary:', error);
-      return null;
-    }
+  _getDefaultProgress() {
+    return {
+      totalXP: 0,
+      currentLevel: 1,
+      questionsAnswered: 0,
+      correctAnswers: 0,
+      currentStreak: 0,
+      longestStreak: 0,
+      progressXP: 0,
+      requiredXP: 100,
+      progressPercentage: 0,
+      nextLevelXP: 100,
+      accuracy: 0
+    };
   }
 }
 
-// Export for global access
-if (typeof window !== 'undefined') {
-  window.XPManager = XPManager;
-} 
+// Make XPManager globally accessible
+window.XPManager = XPManager; 

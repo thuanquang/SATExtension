@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Content Script Test Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 40px;
+            line-height: 1.6;
+        }
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        .test-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-btn:hover {
+            background: #0056b3;
+        }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .info { color: #17a2b8; }
+        #results {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎓 SAT Quiz Extension - Content Script Test</h1>
+    
+    <div class="test-section">
+        <h2>📋 Instructions</h2>
+        <p>This page tests if the SAT Quiz Extension content script loads properly with all gamification systems.</p>
+        <ol>
+            <li>Make sure the extension is loaded and enabled</li>
+            <li>Open browser console to see detailed logs</li>
+            <li>Click the test buttons below</li>
+            <li>Check if extension loads and shows quiz</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 Test Actions</h2>
+        <button class="test-btn" onclick="testExtensionLoaded()">Check Extension Loaded</button>
+        <button class="test-btn" onclick="testGamificationSystems()">Check Gamification Systems</button>
+        <button class="test-btn" onclick="testQuizController()">Test Quiz Controller</button>
+        <button class="test-btn" onclick="forceQuiz()">Force Quiz</button>
+        <button class="test-btn" onclick="getStats()">Get Stats</button>
+        <button class="test-btn" onclick="clearResults()">Clear Results</button>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Test Results</h2>
+        <div id="results">Waiting for tests...\n</div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎮 Expected Behavior</h2>
+        <ul>
+            <li><strong>Extension Loaded:</strong> You should see a green notification saying "SAT Quiz Extension Loaded"</li>
+            <li><strong>Gamification Systems:</strong> All systems (XP, Badge, Streak, Challenge) should be available</li>
+            <li><strong>Force Quiz:</strong> Should block the page and show a quiz with gamification features</li>
+            <li><strong>Stats:</strong> Should show gamification stats like XP, level, badges, streaks</li>
+        </ul>
+    </div>
+
+    <div style="height: 200px; background: linear-gradient(45deg, #f0f0f0, #e0e0e0); margin: 20px 0; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #666;">
+        Sample content to verify website blocking works
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const results = document.getElementById('results');
+            const colorMap = {
+                info: '#00ff00',
+                error: '#ff0000',
+                warning: '#ffff00',
+                success: '#00ff88'
+            };
+            
+            const color = colorMap[type] || '#00ff00';
+            results.innerHTML += `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            results.scrollTop = results.scrollHeight;
+            
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = 'Results cleared...\n';
+        }
+
+        async function testExtensionLoaded() {
+            log('🧪 Testing if extension is loaded...', 'info');
+            
+            try {
+                // Check for QuizController
+                if (typeof window.QuizController !== 'undefined') {
+                    log('✅ QuizController class found', 'success');
+                    
+                    // Check for instance
+                    const instance = window.QuizController.getInstance ? window.QuizController.getInstance() : window.quizController;
+                    if (instance) {
+                        log('✅ QuizController instance found', 'success');
+                        
+                        // Check gamification systems on instance
+                        const systems = {
+                            xpManager: !!instance.xpManager,
+                            badgeManager: !!instance.badgeManager,
+                            streakManager: !!instance.streakManager,
+                            challengeEngine: !!instance.challengeEngine,
+                            progressDashboard: !!instance.progressDashboard,
+                            customizationManager: !!instance.customizationManager
+                        };
+                        
+                        log(`✅ Gamification systems status: ${JSON.stringify(systems)}`, 'success');
+                        
+                        if (instance.userId) {
+                            log(`✅ User ID: ${instance.userId}`, 'success');
+                        } else {
+                            log('⚠️ User ID not set', 'warning');
+                        }
+                        
+                    } else {
+                        log('❌ QuizController instance not found', 'error');
+                    }
+                } else {
+                    log('❌ QuizController class not found', 'error');
+                }
+                
+                // Check for debug helpers
+                if (typeof window.debugQuiz !== 'undefined') {
+                    log('✅ Debug helpers available', 'success');
+                } else {
+                    log('❌ Debug helpers not found', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Error testing extension: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGamificationSystems() {
+            log('🎮 Testing gamification systems...', 'info');
+            
+            try {
+                const systems = ['XPManager', 'BadgeManager', 'StreakManager', 'ChallengeEngine', 'CustomizationManager', 'ProgressDashboard'];
+                
+                systems.forEach(system => {
+                    if (typeof window[system] !== 'undefined') {
+                        log(`✅ ${system} class available`, 'success');
+                    } else {
+                        log(`❌ ${system} class not found`, 'error');
+                    }
+                });
+                
+                // Test if we can create instances
+                if (typeof window.XPManager !== 'undefined') {
+                    try {
+                        const xpManager = new window.XPManager(null);
+                        log('✅ XPManager instance created successfully', 'success');
+                    } catch (error) {
+                        log(`❌ Error creating XPManager: ${error.message}`, 'error');
+                    }
+                }
+                
+            } catch (error) {
+                log(`❌ Error testing gamification systems: ${error.message}`, 'error');
+            }
+        }
+
+        async function testQuizController() {
+            log('🎓 Testing QuizController functionality...', 'info');
+            
+            try {
+                const controller = window.QuizController?.getInstance() || window.quizController;
+                
+                if (!controller) {
+                    log('❌ QuizController not available', 'error');
+                    return;
+                }
+                
+                // Test getState
+                try {
+                    const state = controller.getState();
+                    log(`✅ getState() works: ${JSON.stringify(state)}`, 'success');
+                } catch (error) {
+                    log(`❌ getState() error: ${error.message}`, 'error');
+                }
+                
+                // Test getGamificationSummary
+                try {
+                    const summary = await controller.getGamificationSummary();
+                    log(`✅ getGamificationSummary() works`, 'success');
+                    log(`📊 Summary: ${JSON.stringify(summary, null, 2)}`, 'info');
+                } catch (error) {
+                    log(`❌ getGamificationSummary() error: ${error.message}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Error testing QuizController: ${error.message}`, 'error');
+            }
+        }
+
+        async function forceQuiz() {
+            log('⚡ Attempting to force quiz...', 'info');
+            
+            try {
+                // Method 1: Direct QuizController call
+                const controller = window.QuizController?.getInstance() || window.quizController;
+                if (controller && typeof controller.forceQuiz === 'function') {
+                    log('🎯 Calling controller.forceQuiz()...', 'info');
+                    await controller.forceQuiz();
+                    log('✅ Force quiz completed via controller', 'success');
+                    return;
+                }
+                
+                // Method 2: Debug helper
+                if (window.debugQuiz && typeof window.debugQuiz.forceQuiz === 'function') {
+                    log('🎯 Calling debugQuiz.forceQuiz()...', 'info');
+                    await window.debugQuiz.forceQuiz();
+                    log('✅ Force quiz completed via debug helper', 'success');
+                    return;
+                }
+                
+                // Method 3: Chrome extension message
+                if (typeof chrome !== 'undefined' && chrome.runtime) {
+                    log('🎯 Sending chrome.runtime.sendMessage...', 'info');
+                    const response = await chrome.runtime.sendMessage({ action: 'forceQuiz' });
+                    log(`✅ Chrome message response: ${JSON.stringify(response)}`, 'success');
+                    return;
+                }
+                
+                log('❌ No method available to force quiz', 'error');
+                
+            } catch (error) {
+                log(`❌ Error forcing quiz: ${error.message}`, 'error');
+            }
+        }
+
+        async function getStats() {
+            log('📊 Getting gamification stats...', 'info');
+            
+            try {
+                // Method 1: Direct QuizController call
+                const controller = window.QuizController?.getInstance() || window.quizController;
+                if (controller && typeof controller.getGamificationSummary === 'function') {
+                    log('📊 Getting stats via controller...', 'info');
+                    const stats = await controller.getGamificationSummary();
+                    log(`✅ Stats retrieved: ${JSON.stringify(stats, null, 2)}`, 'success');
+                    return;
+                }
+                
+                // Method 2: Chrome extension message
+                if (typeof chrome !== 'undefined' && chrome.runtime) {
+                    log('📊 Getting stats via chrome message...', 'info');
+                    const response = await chrome.runtime.sendMessage({ action: 'getGamificationStats' });
+                    log(`✅ Chrome stats response: ${JSON.stringify(response, null, 2)}`, 'success');
+                    return;
+                }
+                
+                log('❌ No method available to get stats', 'error');
+                
+            } catch (error) {
+                log(`❌ Error getting stats: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-start basic test when page loads
+        window.addEventListener('load', () => {
+            log('🎓 Content script test page loaded', 'info');
+            log('⏳ Waiting for extension to initialize...', 'info');
+            
+            // Wait a moment for extension to load, then run basic test
+            setTimeout(() => {
+                testExtensionLoaded();
+            }, 2000);
+        });
+    </script>
+</body>
+</html> 

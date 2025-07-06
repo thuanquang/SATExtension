@@ -66,19 +66,32 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
   
-  // Forward forceQuiz messages to content script
-  if (request.action === 'forceQuiz') {
+  // Forward messages to content script
+  if (request.action === 'forceQuiz' || request.action === 'getGamificationStats') {
     chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
       if (tabs[0]) {
         try {
-          const response = await chrome.tabs.sendMessage(tabs[0].id, { action: 'forceQuiz' });
+          const response = await chrome.tabs.sendMessage(tabs[0].id, request);
           sendResponse(response);
         } catch (error) {
-          console.error('Failed to send forceQuiz to content script:', error);
-          sendResponse({ 
-            success: false, 
-            error: 'Extension not loaded on this page. Try refreshing and ensure the page is a regular website.' 
-          });
+          console.error(`Failed to send ${request.action} to content script:`, error);
+          
+          if (request.action === 'getGamificationStats') {
+            // Return default gamification stats if content script not available
+            sendResponse({ 
+              success: true,
+              xp: { current: 0, level: 1, nextLevelXP: 100, progressPercentage: 0 },
+              streaks: { current: 0, longest: 0, daily: 0, level: 'none' },
+              badges: { earned: 0, total: 0, recent: [] },
+              challenges: { hasChallenge: false, progress: 0 },
+              customization: { currentTheme: 'Default', availableThemes: 0 }
+            });
+          } else {
+            sendResponse({ 
+              success: false, 
+              error: 'Extension not loaded on this page. Try refreshing and ensure the page is a regular website.' 
+            });
+          }
         }
       } else {
         sendResponse({ success: false, error: 'No active tab found' });

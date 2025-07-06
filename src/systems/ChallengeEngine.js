@@ -1,766 +1,541 @@
 /**
- * ChallengeEngine - Manages daily challenges and themed events
- * Handles challenge generation, progress tracking, and rewards
+ * ChallengeEngine - Handles daily challenges and special events
+ * Creates engaging daily tasks and tracks completion
  */
-import { getCurrentUserId } from '../db/supabase-client.js';
 
 class ChallengeEngine {
-  constructor(supabaseClient, xpManager, badgeManager) {
+  constructor(supabaseClient) {
     this.supabaseClient = supabaseClient;
-    this.xpManager = xpManager;
-    this.badgeManager = badgeManager;
-    
-    // Challenge types and themes
     this.challengeTypes = {
-      MATH_MONDAY: 'math_monday',
-      TACTICAL_TUESDAY: 'tactical_tuesday',
-      WORD_WEDNESDAY: 'word_wednesday',
-      THINKING_THURSDAY: 'thinking_thursday',
-      FAST_FRIDAY: 'fast_friday',
-      CHOICE_SATURDAY: 'choice_saturday',
-      SUNDAY_REVIEW: 'sunday_review'
+      ACCURACY: 'accuracy',
+      SPEED: 'speed',
+      VOLUME: 'volume',
+      STREAK: 'streak',
+      SUBJECT: 'subject',
+      DIFFICULTY: 'difficulty'
     };
-    
-    // Challenge difficulty scaling
-    this.difficultyScaling = {
-      beginner: { minQuestions: 2, maxQuestions: 3, timeBonus: false },
-      intermediate: { minQuestions: 3, maxQuestions: 4, timeBonus: true },
-      advanced: { minQuestions: 4, maxQuestions: 5, timeBonus: true },
-      expert: { minQuestions: 5, maxQuestions: 6, timeBonus: true }
-    };
-    
-    console.log('🎯 Challenge Engine initialized');
+    this.difficulties = ['easy', 'medium', 'hard'];
+    this.subjects = ['math', 'reading', 'writing', 'science'];
   }
 
   /**
-   * Initialize challenge system for user
+   * Generate daily challenge for user
    */
-  async initializeChallenges() {
+  async generateDailyChallenge(userId) {
     try {
-      console.log('🎯 Initializing challenges for user:', await getCurrentUserId());
+      const today = new Date().toISOString().split('T')[0];
       
-      // Load existing challenges
-      await this.loadActiveChallenges();
+      // Check if there's already a challenge for today (global challenge, not user-specific)
+      const existingChallenge = await this.getTodaysChallenge();
+      if (existingChallenge) {
+        return { success: true, challenge: existingChallenge, isNew: false };
+      }
+
+      // Get user's recent performance to create personalized challenge type
+      const userStats = await this.getUserStats(userId);
       
-      // Generate today's challenge if not exists
-      await this.generateDailyChallenge();
+      // Generate challenge based on day of week and user's level
+      const challenge = this.createDailyChallenge(userStats, today);
       
-      console.log('🎯 Challenge system initialized');
-      return { success: true };
+      return { success: true, challenge: challenge, isNew: true };
+
     } catch (error) {
-      console.error('🎯 Error initializing challenges:', error);
+      console.error('Exception in generateDailyChallenge:', error);
       return { success: false, error: error.message };
     }
   }
 
   /**
-   * Generate daily challenge based on current date and user level
+   * Create daily challenge based on day and user level
    */
-  async generateDailyChallenge() {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const dayOfWeek = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
-      
-      // Check if challenge already exists for today
-      const existingChallenge = await this.getTodaysChallenge(today);
-      if (existingChallenge) {
-        console.log('🎯 Daily challenge already exists for today');
-        return existingChallenge;
-      }
-      
-      // Get user level for difficulty scaling
-      const userProgress = await this.xpManager.getUserProgress(await getCurrentUserId());
-      const userLevel = userProgress.current_level || 1;
-      const difficulty = this.getUserDifficultyTier(userLevel);
-      
-      // Generate challenge based on day of week
-      const challengeData = this.generateChallengeByDay(dayOfWeek, difficulty);
-      
-      // Save challenge to database
-      const challenge = await this.createChallenge(today, challengeData);
-      
-      console.log('🎯 Daily challenge generated:', challenge);
-      return challenge;
-      
-    } catch (error) {
-      console.error('🎯 Error generating daily challenge:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Generate challenge configuration based on day of week
-   */
-  generateChallengeByDay(dayOfWeek, difficulty) {
-    const scaling = this.difficultyScaling[difficulty];
+  createDailyChallenge(userStats, dateString) {
+    const date = new Date(dateString);
+    const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
     
+    // Define daily themes
+    const dailyThemes = {
+      1: 'Math Monday',
+      2: 'Text Tuesday', 
+      3: 'Word Wednesday',
+      4: 'Think Thursday',
+      5: 'Fast Friday',
+      6: 'Study Saturday',
+      0: 'Sunday Summary'
+    };
+
+    const themeName = dailyThemes[dayOfWeek] || 'Daily Challenge';
+    
+    // Create challenge based on day theme and user level
+    let challenge;
     switch (dayOfWeek) {
-      case 1: // Monday - Math Monday
-        return {
-          type: this.challengeTypes.MATH_MONDAY,
-          name: 'Math Monday Challenge',
-          description: 'Master mathematical concepts to start your week strong!',
-          icon: '🧮',
-          requirements: {
-            subjects: ['Algebra', 'Geometry'],
-            min_questions: scaling.minQuestions,
-            target_questions: scaling.maxQuestions,
-            bonus_xp_multiplier: 1.5,
-            required_accuracy: 70
-          },
-          rewards: {
-            xp_bonus: 50,
-            badge_progress: 'math_focus',
-            streak_bonus: 'math_mastery'
-          },
-          timeLimit: null // No time limit for Math Monday
-        };
-
-      case 2: // Tuesday - Tactical Tuesday
-        return {
-          type: this.challengeTypes.TACTICAL_TUESDAY,
-          name: 'Tactical Tuesday',
-          description: 'Progress through difficulty levels strategically!',
-          icon: '🎯',
-          requirements: {
-            difficulty_progression: ['easy', 'medium', 'hard'],
-            min_questions: scaling.minQuestions,
-            streak_bonus: 0.5,
-            consecutive_correct: 3
-          },
-          rewards: {
-            xp_bonus: 75,
-            badge_progress: 'difficulty_conquest',
-            special_unlock: 'tactical_badge'
-          },
-          timeLimit: null
-        };
-
-      case 3: // Wednesday - Word Wednesday
-        return {
-          type: this.challengeTypes.WORD_WEDNESDAY,
-          name: 'Word Wednesday',
-          description: 'Expand your vocabulary and grammar mastery!',
-          icon: '📖',
-          requirements: {
-            subjects: ['Vocabulary', 'Grammar'],
-            min_questions: scaling.minQuestions,
-            target_questions: scaling.maxQuestions,
-            bonus_xp_multiplier: 1.5,
-            required_accuracy: 75
-          },
-          rewards: {
-            xp_bonus: 50,
-            badge_progress: 'verbal_focus',
-            vocab_boost: true
-          },
-          timeLimit: null
-        };
-
-      case 4: // Thursday - Thinking Thursday
-        return {
-          type: this.challengeTypes.THINKING_THURSDAY,
-          name: 'Thinking Thursday',
-          description: 'Focus on weak areas and turn them into strengths!',
-          icon: '🧠',
-          requirements: {
-            weakness_focus: true,
-            min_questions: scaling.minQuestions,
-            improvement_target: 20, // 20% improvement in weak areas
-            review_explanations: true
-          },
-          rewards: {
-            xp_bonus: 100,
-            badge_progress: 'improvement_star',
-            weakness_boost: true
-          },
-          timeLimit: null
-        };
-
-      case 5: // Friday - Fast Friday
-        return {
-          type: this.challengeTypes.FAST_FRIDAY,
-          name: 'Fast Friday',
-          description: 'Speed and accuracy challenge - beat the clock!',
-          icon: '⚡',
-          requirements: {
-            time_limit_per_question: 30, // 30 seconds per question
-            min_questions: scaling.minQuestions,
-            speed_bonus_threshold: 20, // Under 20 seconds for bonus
-            required_accuracy: 80
-          },
-          rewards: {
-            xp_bonus: 60,
-            badge_progress: 'speed_demon',
-            time_master_boost: true
-          },
-          timeLimit: scaling.minQuestions * 30 * 1000 // Total time limit
-        };
-
-      case 6: // Saturday - Choice Saturday
-        return {
-          type: this.challengeTypes.CHOICE_SATURDAY,
-          name: 'Choice Saturday',
-          description: 'You choose your focus - any subject, any difficulty!',
-          icon: '🎪',
-          requirements: {
-            user_choice: true,
-            min_questions: scaling.minQuestions,
-            flexibility_bonus: 0.25, // 25% bonus for self-direction
-            any_subject: true
-          },
-          rewards: {
-            xp_bonus: 40,
-            badge_progress: 'self_directed',
-            choice_freedom: true
-          },
-          timeLimit: null
-        };
-
-      case 0: // Sunday - Review Sunday
-        return {
-          type: this.challengeTypes.SUNDAY_REVIEW,
-          name: 'Sunday Review',
-          description: 'Review the week\'s learning and consolidate knowledge!',
-          icon: '📚',
-          requirements: {
-            review_mode: true,
-            min_questions: scaling.minQuestions,
-            previous_week_focus: true,
-            explanation_time: 10 // Minimum 10 seconds on explanations
-          },
-          rewards: {
-            xp_bonus: 80,
-            badge_progress: 'knowledge_seeker',
-            weekly_completion_bonus: true
-          },
-          timeLimit: null
-        };
-
+      case 1: // Monday - Math focus
+        challenge = this.createMathChallenge(userStats);
+        break;
+      case 2: // Tuesday - Reading comprehension
+        challenge = this.createReadingChallenge(userStats);
+        break;
+      case 3: // Wednesday - Vocabulary
+        challenge = this.createVocabularyChallenge(userStats);
+        break;
+      case 4: // Thursday - Mixed subjects
+        challenge = this.createMixedChallenge(userStats);
+        break;
+      case 5: // Friday - Speed challenge
+        challenge = this.createSpeedChallenge(userStats);
+        break;
+      case 6: // Saturday - Volume challenge
+        challenge = this.createVolumeChallenge(userStats);
+        break;
+      case 0: // Sunday - Review/streak
+        challenge = this.createStreakChallenge(userStats);
+        break;
       default:
-        return this.generateChallengeByDay(1, difficulty); // Default to Monday
+        challenge = this.createMixedChallenge(userStats);
     }
+
+    return {
+      ...challenge,
+      theme: themeName,
+      date: dateString,
+      id: this.generateChallengeId()
+    };
   }
 
   /**
-   * Get user difficulty tier based on level
+   * Create math-focused challenge
    */
-  getUserDifficultyTier(level) {
-    if (level <= 5) return 'beginner';
-    if (level <= 10) return 'intermediate';
-    if (level <= 15) return 'advanced';
-    return 'expert';
+  createMathChallenge(userStats) {
+    const level = userStats.current_level || 1;
+    const questionCount = Math.max(3, Math.min(10, Math.floor(level / 2) + 3));
+
+    return {
+      type: this.challengeTypes.SUBJECT,
+      title: 'Math Monday Challenge',
+      description: `Master ${questionCount} math questions with 75% accuracy`,
+      icon: '🔢',
+      difficulty: level >= 5 ? 'medium' : 'easy',
+      requirements: {
+        subject: 'math',
+        questionCount: questionCount,
+        accuracy: 75
+      },
+      rewards: {
+        xp: questionCount * 8,
+        badge: questionCount >= 8 ? 'math_specialist' : null
+      }
+    };
   }
 
   /**
-   * Create challenge in database
+   * Create reading-focused challenge
    */
-  async createChallenge(date, challengeData) {
+  createReadingChallenge(userStats) {
+    const level = userStats.current_level || 1;
+    const questionCount = Math.max(3, Math.min(8, Math.floor(level / 3) + 3));
+
+    return {
+      type: this.challengeTypes.SUBJECT,
+      title: 'Text Tuesday Challenge',
+      description: `Complete ${questionCount} reading questions correctly`,
+      icon: '📖',
+      difficulty: level >= 7 ? 'medium' : 'easy',
+      requirements: {
+        subject: 'reading',
+        questionCount: questionCount,
+        accuracy: 70
+      },
+      rewards: {
+        xp: questionCount * 7,
+        badge: questionCount >= 6 ? 'reading_specialist' : null
+      }
+    };
+  }
+
+  /**
+   * Create vocabulary-focused challenge
+   */
+  createVocabularyChallenge(userStats) {
+    const level = userStats.current_level || 1;
+    const questionCount = Math.max(4, Math.min(12, Math.floor(level / 2) + 4));
+
+    return {
+      type: this.challengeTypes.SUBJECT,
+      title: 'Word Wednesday Challenge',
+      description: `Expand vocabulary with ${questionCount} word questions`,
+      icon: '📝',
+      difficulty: level >= 6 ? 'medium' : 'easy',
+      requirements: {
+        subject: 'writing',
+        questionCount: questionCount,
+        accuracy: 70
+      },
+      rewards: {
+        xp: questionCount * 6,
+        badge: questionCount >= 10 ? 'vocabulary_master' : null
+      }
+    };
+  }
+
+  /**
+   * Create mixed subject challenge
+   */
+  createMixedChallenge(userStats) {
+    const level = userStats.current_level || 1;
+    const questionCount = Math.max(5, Math.min(15, Math.floor(level / 2) + 5));
+
+    return {
+      type: this.challengeTypes.VOLUME,
+      title: 'Think Thursday Challenge',
+      description: `Tackle ${questionCount} questions from any subject`,
+      icon: '🧠',
+      difficulty: level >= 8 ? 'hard' : 'medium',
+      requirements: {
+        questionCount: questionCount,
+        accuracy: 65
+      },
+      rewards: {
+        xp: questionCount * 5,
+        badge: questionCount >= 12 ? 'versatile_learner' : null
+      }
+    };
+  }
+
+  /**
+   * Create speed-focused challenge
+   */
+  createSpeedChallenge(userStats) {
+    const level = userStats.current_level || 1;
+    const questionCount = Math.max(3, Math.min(10, Math.floor(level / 3) + 3));
+    const targetTime = level >= 10 ? 25 : 30; // seconds per question
+
+    return {
+      type: this.challengeTypes.SPEED,
+      title: 'Fast Friday Challenge',
+      description: `Answer ${questionCount} questions in under ${targetTime} seconds each`,
+      icon: '⚡',
+      difficulty: 'hard',
+      requirements: {
+        maxTime: targetTime * 1000, // milliseconds
+        questionCount: questionCount
+      },
+      rewards: {
+        xp: questionCount * 10,
+        badge: questionCount >= 8 ? 'speed_demon' : null
+      }
+    };
+  }
+
+  /**
+   * Create volume-focused challenge
+   */
+  createVolumeChallenge(userStats) {
+    const level = userStats.current_level || 1;
+    const questionCount = Math.max(8, Math.min(25, Math.floor(level) + 8));
+
+    return {
+      type: this.challengeTypes.VOLUME,
+      title: 'Study Saturday Challenge',
+      description: `Power through ${questionCount} questions today`,
+      icon: '📚',
+      difficulty: 'easy',
+      requirements: {
+        questionCount: questionCount
+      },
+      rewards: {
+        xp: questionCount * 4,
+        badge: questionCount >= 20 ? 'volume_master' : null
+      }
+    };
+  }
+
+  /**
+   * Create streak-focused challenge
+   */
+  createStreakChallenge(userStats) {
+    const level = userStats.current_level || 1;
+    const currentStreak = userStats.current_streak || 0;
+    const targetStreak = Math.max(3, Math.min(12, currentStreak + Math.floor(level / 2) + 2));
+
+    return {
+      type: this.challengeTypes.STREAK,
+      title: 'Sunday Summary Challenge',
+      description: `Build a ${targetStreak} question streak`,
+      icon: '🔥',
+      difficulty: 'medium',
+      requirements: {
+        streakTarget: targetStreak
+      },
+      rewards: {
+        xp: targetStreak * 12,
+        badge: targetStreak >= 10 ? 'streak_master' : null
+      }
+    };
+  }
+
+  /**
+   * Update challenge progress (simplified for current schema)
+   */
+  async updateChallengeProgress(userId, questionResult) {
     try {
-      const { data, error } = await this.supabaseClient.supabase
-        .from('daily_challenges')
-        .insert({
-          challenge_date: date,
-          challenge_type: challengeData.type,
-          challenge_name: challengeData.name,
-          challenge_description: challengeData.description,
-          requirements: challengeData.requirements,
-          rewards: challengeData.rewards,
-          is_active: true
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('🎯 Error creating challenge:', error);
-        return null;
+      const challenge = await this.getTodaysChallenge();
+      if (!challenge) {
+        return { success: true, noActiveChallenge: true };
       }
 
-      // Initialize user progress for this challenge
-      await this.initializeUserChallengeProgress(data.challenge_id);
+      // Get user's current stats for progress calculation
+      const userStats = await this.getUserStats(userId);
+      const progress = this.calculateUserProgress(challenge, userStats, questionResult);
+      const isCompleted = this.isChallengeCompleted(challenge, progress);
 
-      return {
-        ...data,
-        icon: challengeData.icon,
-        timeLimit: challengeData.timeLimit
-      };
-    } catch (error) {
-      console.error('🎯 Error in createChallenge:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Initialize user progress for a challenge
-   */
-  async initializeUserChallengeProgress(challengeId) {
-    try {
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_challenge_progress')
-        .insert({
-          user_id: await getCurrentUserId(),
-          challenge_id: challengeId,
-          progress_data: {
-            questions_attempted: 0,
-            questions_correct: 0,
-            subjects_completed: {},
-            difficulty_progression: {},
-            start_time: new Date().toISOString(),
-            special_conditions_met: {}
-          },
-          is_completed: false
-        })
-        .select();
-
-      if (error) {
-        console.error('🎯 Error initializing challenge progress:', error);
-        return false;
+      // Award rewards if just completed
+      let rewardResult = null;
+      if (isCompleted) {
+        rewardResult = await this.awardChallengeRewards(userId, challenge);
       }
-
-      return true;
-    } catch (error) {
-      console.error('🎯 Error in initializeUserChallengeProgress:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Update challenge progress after quiz completion
-   */
-  async updateChallengeProgress(quizResult) {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const todaysChallenge = await this.getTodaysChallenge(today);
-      
-      if (!todaysChallenge) {
-        console.log('🎯 No active challenge for today');
-        return { success: false, reason: 'no_active_challenge' };
-      }
-
-      // Get current progress
-      const currentProgress = await this.getUserChallengeProgress(todaysChallenge.challenge_id);
-      if (!currentProgress) {
-        console.error('🎯 No progress record found for challenge');
-        return { success: false, reason: 'no_progress_record' };
-      }
-
-      // Update progress based on quiz result
-      const updatedProgress = this.calculateProgressUpdate(
-        currentProgress.progress_data, 
-        quizResult, 
-        todaysChallenge.requirements
-      );
-
-      // Check if challenge is completed
-      const isCompleted = this.checkChallengeCompletion(updatedProgress, todaysChallenge.requirements);
-
-      // Update database
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_challenge_progress')
-        .update({
-          progress_data: updatedProgress,
-          is_completed: isCompleted,
-          completed_at: isCompleted ? new Date().toISOString() : null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', await getCurrentUserId())
-        .eq('challenge_id', todaysChallenge.challenge_id)
-        .select();
-
-      if (error) {
-        console.error('🎯 Error updating challenge progress:', error);
-        return { success: false, error: error.message };
-      }
-
-      // Award rewards if completed
-      let rewards = {};
-      if (isCompleted && !currentProgress.is_completed) {
-        rewards = await this.awardChallengeRewards(todaysChallenge);
-      }
-
-      console.log('🎯 Challenge progress updated:', {
-        progress: updatedProgress,
-        completed: isCompleted,
-        rewards: rewards
-      });
 
       return {
         success: true,
-        progress: updatedProgress,
-        completed: isCompleted,
-        rewards: rewards,
-        challenge: todaysChallenge
+        challenge: challenge,
+        progress: progress,
+        isCompleted: isCompleted,
+        rewards: rewardResult
       };
 
     } catch (error) {
-      console.error('🎯 Error updating challenge progress:', error);
+      console.error('Exception in updateChallengeProgress:', error);
       return { success: false, error: error.message };
     }
   }
 
   /**
-   * Calculate progress update based on quiz result
+   * Calculate user progress for current challenge
    */
-  calculateProgressUpdate(currentProgress, quizResult, requirements) {
-    const progress = { ...currentProgress };
+  calculateUserProgress(challenge, userStats, latestResult) {
+    const today = new Date().toISOString().split('T')[0];
+    const lastQuizDate = userStats.last_quiz_time ? 
+      new Date(userStats.last_quiz_time).toISOString().split('T')[0] : null;
     
-    // Update basic counters
-    progress.questions_attempted = (progress.questions_attempted || 0) + 1;
-    if (quizResult.isCorrect) {
-      progress.questions_correct = (progress.questions_correct || 0) + 1;
+    // Simple progress calculation based on user stats
+    // In a full implementation, we'd track daily progress separately
+    switch (challenge.type) {
+      case this.challengeTypes.VOLUME:
+        return {
+          current: userStats.questions_answered || 0,
+          target: challenge.requirements.questionCount,
+          percentage: Math.min(100, ((userStats.questions_answered || 0) / challenge.requirements.questionCount) * 100)
+        };
+
+      case this.challengeTypes.STREAK:
+        return {
+          current: userStats.current_streak || 0,
+          target: challenge.requirements.streakTarget,
+          percentage: Math.min(100, ((userStats.current_streak || 0) / challenge.requirements.streakTarget) * 100)
+        };
+
+      case this.challengeTypes.ACCURACY:
+        const accuracy = userStats.questions_answered > 0 ? 
+          (userStats.questions_correct / userStats.questions_answered) * 100 : 0;
+        return {
+          current: accuracy,
+          target: challenge.requirements.accuracy,
+          percentage: Math.min(100, (accuracy / challenge.requirements.accuracy) * 100)
+        };
+
+      default:
+        // For other types, use a simple completion estimation
+        return {
+          current: userStats.questions_answered || 0,
+          target: challenge.requirements.questionCount || 5,
+          percentage: Math.min(100, ((userStats.questions_answered || 0) / (challenge.requirements.questionCount || 5)) * 100)
+        };
     }
-
-    // Update subject progress
-    if (quizResult.subject) {
-      if (!progress.subjects_completed) progress.subjects_completed = {};
-      if (!progress.subjects_completed[quizResult.subject]) {
-        progress.subjects_completed[quizResult.subject] = { attempted: 0, correct: 0 };
-      }
-      progress.subjects_completed[quizResult.subject].attempted++;
-      if (quizResult.isCorrect) {
-        progress.subjects_completed[quizResult.subject].correct++;
-      }
-    }
-
-    // Update difficulty progression
-    if (quizResult.difficulty) {
-      if (!progress.difficulty_progression) progress.difficulty_progression = {};
-      if (!progress.difficulty_progression[quizResult.difficulty]) {
-        progress.difficulty_progression[quizResult.difficulty] = { attempted: 0, correct: 0 };
-      }
-      progress.difficulty_progression[quizResult.difficulty].attempted++;
-      if (quizResult.isCorrect) {
-        progress.difficulty_progression[quizResult.difficulty].correct++;
-      }
-    }
-
-    // Update special conditions
-    if (!progress.special_conditions_met) progress.special_conditions_met = {};
-
-    // Speed challenge conditions
-    if (requirements.time_limit_per_question && quizResult.timeToAnswer) {
-      const timeInSeconds = quizResult.timeToAnswer / 1000;
-      if (timeInSeconds <= requirements.speed_bonus_threshold) {
-        progress.special_conditions_met.speed_bonus_achieved = (progress.special_conditions_met.speed_bonus_achieved || 0) + 1;
-      }
-    }
-
-    // Consecutive correct tracking
-    if (requirements.consecutive_correct) {
-      if (quizResult.isCorrect) {
-        progress.special_conditions_met.current_streak = (progress.special_conditions_met.current_streak || 0) + 1;
-        progress.special_conditions_met.max_streak = Math.max(
-          progress.special_conditions_met.max_streak || 0,
-          progress.special_conditions_met.current_streak
-        );
-      } else {
-        progress.special_conditions_met.current_streak = 0;
-      }
-    }
-
-    // Explanation viewing time
-    if (requirements.explanation_time && quizResult.explanationTime) {
-      if (quizResult.explanationTime >= requirements.explanation_time * 1000) {
-        progress.special_conditions_met.thorough_explanations = (progress.special_conditions_met.thorough_explanations || 0) + 1;
-      }
-    }
-
-    return progress;
   }
 
   /**
-   * Check if challenge requirements are met
+   * Check if challenge is completed based on progress
    */
-  checkChallengeCompletion(progress, requirements) {
-    // Check minimum questions
-    if (requirements.min_questions && progress.questions_attempted < requirements.min_questions) {
-      return false;
-    }
-
-    // Check accuracy requirement
-    if (requirements.required_accuracy && progress.questions_attempted > 0) {
-      const accuracy = (progress.questions_correct / progress.questions_attempted) * 100;
-      if (accuracy < requirements.required_accuracy) {
-        return false;
-      }
-    }
-
-    // Check subject requirements
-    if (requirements.subjects && requirements.subjects.length > 0) {
-      for (const subject of requirements.subjects) {
-        const subjectProgress = progress.subjects_completed?.[subject];
-        if (!subjectProgress || subjectProgress.correct === 0) {
-          return false;
-        }
-      }
-    }
-
-    // Check difficulty progression
-    if (requirements.difficulty_progression && requirements.difficulty_progression.length > 0) {
-      for (const difficulty of requirements.difficulty_progression) {
-        const difficultyProgress = progress.difficulty_progression?.[difficulty];
-        if (!difficultyProgress || difficultyProgress.correct === 0) {
-          return false;
-        }
-      }
-    }
-
-    // Check consecutive correct
-    if (requirements.consecutive_correct) {
-      const maxStreak = progress.special_conditions_met?.max_streak || 0;
-      if (maxStreak < requirements.consecutive_correct) {
-        return false;
-      }
-    }
-
-    return true;
+  isChallengeCompleted(challenge, progress) {
+    return progress.percentage >= 100;
   }
 
   /**
    * Award challenge completion rewards
    */
-  async awardChallengeRewards(challenge) {
+  async awardChallengeRewards(userId, challenge) {
     try {
-      const rewards = {
-        xp: 0,
-        badges: [],
-        special: []
-      };
+      const rewards = challenge.rewards;
+      const results = {};
 
-      // Award XP bonus
-      if (challenge.rewards.xp_bonus) {
-        const xpResult = await this.xpManager.awardXP(await getCurrentUserId(), challenge.rewards.xp_bonus, {
+      // Award XP
+      if (rewards.xp > 0 && window.XPManager) {
+        const xpManager = new window.XPManager(this.supabaseClient);
+        const xpResult = await xpManager.awardXP(userId, rewards.xp, {
           source: 'daily_challenge',
-          challengeType: challenge.challenge_type,
-          challengeName: challenge.challenge_name
+          challengeType: challenge.type,
+          challengeTitle: challenge.title
         });
-        
-        if (xpResult.success) {
-          rewards.xp = challenge.rewards.xp_bonus;
-        }
+        results.xp = xpResult;
       }
 
-      // Update badge progress
-      if (challenge.rewards.badge_progress) {
-        // This would trigger specific badge progress updates
-        rewards.special.push({
-          type: 'badge_progress',
-          category: challenge.rewards.badge_progress,
-          progress: 1
-        });
+      // Award badge
+      if (rewards.badge && window.BadgeManager) {
+        const badgeManager = new window.BadgeManager(this.supabaseClient);
+        const badgeResult = await badgeManager.awardBadge(userId, rewards.badge);
+        results.badge = badgeResult;
       }
 
-      // Award special unlocks
-      if (challenge.rewards.special_unlock) {
-        rewards.special.push({
-          type: 'special_unlock',
-          unlock: challenge.rewards.special_unlock
-        });
-      }
-
-      console.log('🎯 Challenge rewards awarded:', rewards);
-      return rewards;
+      return { success: true, results: results };
 
     } catch (error) {
-      console.error('🎯 Error awarding challenge rewards:', error);
-      return {};
+      console.error('Exception in awardChallengeRewards:', error);
+      return { success: false, error: error.message };
     }
   }
 
   /**
-   * Get today's challenge for user
+   * Get today's challenge (global challenge, not user-specific)
    */
-  async getTodaysChallenge(date) {
-    try {
-      const { data, error } = await this.supabaseClient.supabase
-        .from('daily_challenges')
-        .select('*')
-        .eq('challenge_date', date)
-        .eq('is_active', true)
-        .single();
-
-      if (error || !data) {
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('🎯 Error getting today\'s challenge:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get user's challenge progress
-   */
-  async getUserChallengeProgress(challengeId) {
-    try {
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_challenge_progress')
-        .select('*')
-        .eq('user_id', await getCurrentUserId())
-        .eq('challenge_id', challengeId)
-        .single();
-
-      if (error || !data) {
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('🎯 Error getting user challenge progress:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Load active challenges for user
-   */
-  async loadActiveChallenges() {
-    try {
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_challenge_progress')
-        .select(`
-          *,
-          daily_challenges (*)
-        `)
-        .eq('user_id', await getCurrentUserId())
-        .eq('is_completed', false)
-        .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()); // Last 7 days
-
-      if (error) {
-        console.error('🎯 Error loading active challenges:', error);
-        return [];
-      }
-
-      return data || [];
-    } catch (error) {
-      console.error('🎯 Error in loadActiveChallenges:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get challenge summary for display
-   */
-  async getChallengesSummary() {
+  async getTodaysChallenge() {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const todaysChallenge = await this.getTodaysChallenge(today);
       
-      if (!todaysChallenge) {
-        return {
-          success: false,
-          message: 'No challenge available for today'
-        };
+      const { data, error } = await window.supabaseQuery('daily_challenges', 'select', null, {
+        challenge_date: today
+      });
+
+      if (error) {
+        console.error('Error fetching today\'s challenge:', error);
+        return null;
       }
 
-      const userProgress = await this.getUserChallengeProgress(todaysChallenge.challenge_id);
-      
-      const summary = {
-        challenge: {
-          name: todaysChallenge.challenge_name,
-          description: todaysChallenge.challenge_description,
-          type: todaysChallenge.challenge_type,
-          requirements: todaysChallenge.requirements,
-          rewards: todaysChallenge.rewards,
-          icon: this.getChallengeIcon(todaysChallenge.challenge_type)
-        },
-        progress: userProgress ? {
-          questionsAttempted: userProgress.progress_data.questions_attempted || 0,
-          questionsCorrect: userProgress.progress_data.questions_correct || 0,
-          isCompleted: userProgress.is_completed,
-          accuracy: userProgress.progress_data.questions_attempted > 0 
-            ? Math.round((userProgress.progress_data.questions_correct / userProgress.progress_data.questions_attempted) * 100)
-            : 0,
-          specialConditions: userProgress.progress_data.special_conditions_met || {}
-        } : {
-          questionsAttempted: 0,
-          questionsCorrect: 0,
-          isCompleted: false,
-          accuracy: 0,
-          specialConditions: {}
-        }
+      if (!data || data.length === 0) {
+        // No challenge found for today, return a generated one
+        const userStats = await this.getUserStats('default');
+        return this.createDailyChallenge(userStats, today);
+      }
+
+      // Convert database format to our format
+      const dbChallenge = data[0];
+      return {
+        id: dbChallenge.challenge_id,
+        type: dbChallenge.challenge_type,
+        title: dbChallenge.challenge_name,
+        description: dbChallenge.challenge_description,
+        requirements: typeof dbChallenge.requirements === 'string' ? 
+          JSON.parse(dbChallenge.requirements) : dbChallenge.requirements,
+        rewards: typeof dbChallenge.rewards === 'string' ? 
+          JSON.parse(dbChallenge.rewards) : dbChallenge.rewards,
+        isActive: dbChallenge.is_active,
+        date: dbChallenge.challenge_date
       };
+
+    } catch (error) {
+      console.error('Exception in getTodaysChallenge:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get user stats for challenge personalization
+   */
+  async getUserStats(userId) {
+    try {
+      const { data, error } = await window.supabaseQuery('user_progress', 'select', null, { user_id: userId });
+
+      if (error) {
+        console.error('Error fetching user stats:', error);
+        return this.getDefaultUserStats();
+      }
+
+      if (!data || data.length === 0) {
+        return this.getDefaultUserStats();
+      }
+
+      return data[0];
+
+    } catch (error) {
+      console.error('Exception in getUserStats:', error);
+      return this.getDefaultUserStats();
+    }
+  }
+
+  /**
+   * Get default user stats
+   */
+  getDefaultUserStats() {
+    return {
+      user_id: 'default',
+      total_xp: 0,
+      current_level: 1,
+      questions_answered: 0,
+      questions_correct: 0,
+      total_attempts: 0,
+      current_streak: 0,
+      longest_streak: 0,
+      last_quiz_time: null
+    };
+  }
+
+  /**
+   * Generate unique challenge ID
+   */
+  generateChallengeId() {
+    return 'challenge_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  /**
+   * Get challenge summary for UI display
+   */
+  async getChallengeSummary(userId) {
+    try {
+      const challenge = await this.getTodaysChallenge();
+      if (!challenge) {
+        return { success: false, error: 'No challenge available' };
+      }
+
+      const userStats = await this.getUserStats(userId);
+      const progress = this.calculateUserProgress(challenge, userStats);
+      const isCompleted = this.isChallengeCompleted(challenge, progress);
 
       return {
         success: true,
-        data: summary
+        challenge: {
+          title: challenge.title,
+          description: challenge.description,
+          icon: challenge.icon || '🎯',
+          type: challenge.type,
+          difficulty: challenge.difficulty || 'medium',
+          progress: progress,
+          isCompleted: isCompleted,
+          rewards: challenge.rewards,
+          timeRemaining: this.getTimeRemaining()
+        }
       };
 
     } catch (error) {
-      console.error('🎯 Error getting challenges summary:', error);
-      return {
-        success: false,
-        error: error.message
-      };
+      console.error('Exception in getChallengeSummary:', error);
+      return { success: false, error: error.message };
     }
   }
 
   /**
-   * Get challenge icon based on type
+   * Get time remaining until challenge resets
    */
-  getChallengeIcon(challengeType) {
-    const icons = {
-      [this.challengeTypes.MATH_MONDAY]: '🧮',
-      [this.challengeTypes.TACTICAL_TUESDAY]: '🎯',
-      [this.challengeTypes.WORD_WEDNESDAY]: '📖',
-      [this.challengeTypes.THINKING_THURSDAY]: '🧠',
-      [this.challengeTypes.FAST_FRIDAY]: '⚡',
-      [this.challengeTypes.CHOICE_SATURDAY]: '🎪',
-      [this.challengeTypes.SUNDAY_REVIEW]: '📚'
-    };
+  getTimeRemaining() {
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
     
-    return icons[challengeType] || '🎯';
-  }
-
-  /**
-   * Get weekly challenge statistics
-   */
-  async getWeeklyChallengeStats() {
-    try {
-      const weekStart = new Date();
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay()); // Start of week (Sunday)
-      const weekStartStr = weekStart.toISOString().split('T')[0];
-
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_challenge_progress')
-        .select(`
-          *,
-          daily_challenges!inner (challenge_date, challenge_type, challenge_name)
-        `)
-        .eq('user_id', await getCurrentUserId())
-        .gte('daily_challenges.challenge_date', weekStartStr);
-
-      if (error) {
-        console.error('🎯 Error getting weekly stats:', error);
-        return { completed: 0, total: 0, details: [] };
-      }
-
-      const completed = data.filter(p => p.is_completed).length;
-      const total = data.length;
-
-      return {
-        completed,
-        total,
-        completionRate: total > 0 ? Math.round((completed / total) * 100) : 0,
-        details: data.map(p => ({
-          date: p.daily_challenges.challenge_date,
-          type: p.daily_challenges.challenge_type,
-          name: p.daily_challenges.challenge_name,
-          completed: p.is_completed,
-          progress: p.progress_data
-        }))
-      };
-
-    } catch (error) {
-      console.error('🎯 Error in getWeeklyChallengeStats:', error);
-      return { completed: 0, total: 0, details: [] };
-    }
+    const msRemaining = tomorrow.getTime() - now.getTime();
+    const hoursRemaining = Math.floor(msRemaining / (1000 * 60 * 60));
+    const minutesRemaining = Math.floor((msRemaining % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${hoursRemaining}h ${minutesRemaining}m`;
   }
 }
 
-// Export for global access
+// Make globally accessible
 if (typeof window !== 'undefined') {
   window.ChallengeEngine = ChallengeEngine;
 } 

@@ -1,770 +1,691 @@
 /**
- * CustomizationManager - Handles themes, avatars, and interface personalization
- * Manages unlockable content based on level progression and achievements
+ * CustomizationManager - Handles user interface customization
+ * Manages themes, layouts, and personalization options
  */
-import { getCurrentUserId } from '../db/supabase-client.js';
 
 class CustomizationManager {
-  constructor(supabaseClient, xpManager, badgeManager) {
+  constructor(supabaseClient) {
     this.supabaseClient = supabaseClient;
-    this.xpManager = xpManager;
-    this.badgeManager = badgeManager;
-    
-    // Theme definitions with unlock requirements
-    this.themes = {
+    this.themes = this._initializeThemes();
+    this.layouts = this._initializeLayouts();
+    this.currentTheme = 'default';
+    this.currentLayout = 'standard';
+  }
+
+  /**
+   * Initialize available themes
+   */
+  _initializeThemes() {
+    return {
       default: {
         id: 'default',
-        name: 'Scholar Classic',
-        description: 'Clean and professional academic theme',
+        name: 'Classic Scholar',
+        description: 'Clean and professional design',
         unlockLevel: 1,
         colors: {
-          primary: '#007BFF',
-          secondary: '#6c757d',
-          background: '#FFFFFF',
-          text: '#212529',
-          accent: '#28a745'
+          primary: '#3b82f6',
+          secondary: '#64748b',
+          background: '#ffffff',
+          surface: '#f8fafc',
+          text: '#1e293b',
+          textSecondary: '#64748b',
+          success: '#10b981',
+          warning: '#f59e0b',
+          error: '#ef4444',
+          accent: '#8b5cf6'
         },
-        isUnlocked: true
+        fonts: {
+          primary: 'Inter, system-ui, sans-serif',
+          secondary: 'Georgia, serif'
+        },
+        borderRadius: '8px',
+        shadows: {
+          small: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+          medium: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          large: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+        }
       },
-      classic_scholar: {
-        id: 'classic_scholar',
-        name: 'Classic Scholar',
-        description: 'Traditional academic colors with timeless appeal',
+      midnight_scholar: {
+        id: 'midnight_scholar',
+        name: 'Midnight Scholar',
+        description: 'Dark theme for late-night studying',
         unlockLevel: 3,
         colors: {
-          primary: '#8B4513',
-          secondary: '#A0522D',
-          background: '#F5F5DC',
-          text: '#2F4F4F',
-          accent: '#CD853F'
+          primary: '#6366f1',
+          secondary: '#94a3b8',
+          background: '#0f172a',
+          surface: '#1e293b',
+          text: '#f1f5f9',
+          textSecondary: '#94a3b8',
+          success: '#22c55e',
+          warning: '#eab308',
+          error: '#f87171',
+          accent: '#a855f7'
+        },
+        fonts: {
+          primary: 'Inter, system-ui, sans-serif',
+          secondary: 'Georgia, serif'
+        },
+        borderRadius: '8px',
+        shadows: {
+          small: '0 1px 2px 0 rgba(0, 0, 0, 0.3)',
+          medium: '0 4px 6px -1px rgba(0, 0, 0, 0.4)',
+          large: '0 10px 15px -3px rgba(0, 0, 0, 0.5)'
         }
       },
-      night_owl: {
-        id: 'night_owl',
-        name: 'Night Owl',
-        description: 'Dark theme perfect for late-night study sessions',
-        unlockLevel: 6,
+      forest_focus: {
+        id: 'forest_focus',
+        name: 'Forest Focus',
+        description: 'Nature-inspired green theme',
+        unlockLevel: 5,
         colors: {
-          primary: '#4A90E2',
-          secondary: '#7B68EE',
-          background: '#1a1a1a',
-          text: '#E0E0E0',
-          accent: '#00CED1'
+          primary: '#059669',
+          secondary: '#6b7280',
+          background: '#f0fdf4',
+          surface: '#dcfce7',
+          text: '#14532d',
+          textSecondary: '#374151',
+          success: '#10b981',
+          warning: '#d97706',
+          error: '#dc2626',
+          accent: '#7c3aed'
+        },
+        fonts: {
+          primary: 'Inter, system-ui, sans-serif',
+          secondary: 'Georgia, serif'
+        },
+        borderRadius: '12px',
+        shadows: {
+          small: '0 1px 2px 0 rgba(5, 150, 105, 0.1)',
+          medium: '0 4px 6px -1px rgba(5, 150, 105, 0.15)',
+          large: '0 10px 15px -3px rgba(5, 150, 105, 0.2)'
         }
       },
-      minimalist: {
-        id: 'minimalist',
-        name: 'Minimalist',
-        description: 'Clean and distraction-free design for focused learning',
-        unlockLevel: 9,
+      ocean_depths: {
+        id: 'ocean_depths',
+        name: 'Ocean Depths',
+        description: 'Calming blue theme for focus',
+        unlockLevel: 8,
         colors: {
-          primary: '#333333',
-          secondary: '#666666',
-          background: '#FAFAFA',
-          text: '#222222',
-          accent: '#4CAF50'
+          primary: '#0284c7',
+          secondary: '#64748b',
+          background: '#f0f9ff',
+          surface: '#e0f2fe',
+          text: '#0c4a6e',
+          textSecondary: '#475569',
+          success: '#0891b2',
+          warning: '#ea580c',
+          error: '#dc2626',
+          accent: '#7c2d12'
+        },
+        fonts: {
+          primary: 'Inter, system-ui, sans-serif',
+          secondary: 'Georgia, serif'
+        },
+        borderRadius: '10px',
+        shadows: {
+          small: '0 1px 2px 0 rgba(2, 132, 199, 0.1)',
+          medium: '0 4px 6px -1px rgba(2, 132, 199, 0.15)',
+          large: '0 10px 15px -3px rgba(2, 132, 199, 0.2)'
         }
       },
-      nature_scholar: {
-        id: 'nature_scholar',
-        name: 'Nature Scholar',
-        description: 'Earth tones to bring natural calm to your studies',
+      sunset_study: {
+        id: 'sunset_study',
+        name: 'Sunset Study',
+        description: 'Warm orange and pink theme',
         unlockLevel: 12,
         colors: {
-          primary: '#2E7D32',
-          secondary: '#4CAF50',
-          background: '#F1F8E9',
-          text: '#1B5E20',
-          accent: '#8BC34A'
+          primary: '#ea580c',
+          secondary: '#78716c',
+          background: '#fef7ed',
+          surface: '#fed7aa',
+          text: '#9a3412',
+          textSecondary: '#57534e',
+          success: '#16a34a',
+          warning: '#d97706',
+          error: '#dc2626',
+          accent: '#c2410c'
+        },
+        fonts: {
+          primary: 'Inter, system-ui, sans-serif',
+          secondary: 'Georgia, serif'
+        },
+        borderRadius: '14px',
+        shadows: {
+          small: '0 1px 2px 0 rgba(234, 88, 12, 0.1)',
+          medium: '0 4px 6px -1px rgba(234, 88, 12, 0.15)',
+          large: '0 10px 15px -3px rgba(234, 88, 12, 0.2)'
         }
       },
-      tech_wizard: {
-        id: 'tech_wizard',
-        name: 'Tech Wizard',
-        description: 'Futuristic design for the digital age learner',
+      galaxy_genius: {
+        id: 'galaxy_genius',
+        name: 'Galaxy Genius',
+        description: 'Cosmic purple theme for advanced learners',
         unlockLevel: 15,
         colors: {
-          primary: '#9C27B0',
-          secondary: '#E91E63',
-          background: '#121212',
-          text: '#BB86FC',
-          accent: '#03DAC6'
+          primary: '#7c3aed',
+          secondary: '#6b7280',
+          background: '#faf5ff',
+          surface: '#f3e8ff',
+          text: '#581c87',
+          textSecondary: '#374151',
+          success: '#059669',
+          warning: '#d97706',
+          error: '#dc2626',
+          accent: '#a855f7'
+        },
+        fonts: {
+          primary: 'Inter, system-ui, sans-serif',
+          secondary: 'Georgia, serif'
+        },
+        borderRadius: '16px',
+        shadows: {
+          small: '0 1px 2px 0 rgba(124, 58, 237, 0.1)',
+          medium: '0 4px 6px -1px rgba(124, 58, 237, 0.15)',
+          large: '0 10px 15px -3px rgba(124, 58, 237, 0.2)'
         }
       },
-      artistic_mind: {
-        id: 'artistic_mind',
-        name: 'Artistic Mind',
-        description: 'Creative and colorful design to inspire innovation',
-        unlockLevel: 18,
+      rainbow_master: {
+        id: 'rainbow_master',
+        name: 'Rainbow Master',
+        description: 'Vibrant multi-color theme',
+        unlockLevel: 20,
         colors: {
-          primary: '#FF5722',
-          secondary: '#FF9800',
-          background: '#FFF8E1',
-          text: '#BF360C',
-          accent: '#FFEB3B'
+          primary: '#ec4899',
+          secondary: '#6b7280',
+          background: '#fefce8',
+          surface: '#fef3c7',
+          text: '#92400e',
+          textSecondary: '#374151',
+          success: '#10b981',
+          warning: '#f59e0b',
+          error: '#ef4444',
+          accent: '#8b5cf6'
+        },
+        fonts: {
+          primary: 'Inter, system-ui, sans-serif',
+          secondary: 'Georgia, serif'
+        },
+        borderRadius: '18px',
+        shadows: {
+          small: '0 1px 2px 0 rgba(236, 72, 153, 0.1)',
+          medium: '0 4px 6px -1px rgba(236, 72, 153, 0.15)',
+          large: '0 10px 15px -3px rgba(236, 72, 153, 0.2)'
         }
       },
       custom_creator: {
         id: 'custom_creator',
         name: 'Custom Creator',
-        description: 'Create your own color scheme',
-        unlockLevel: 21,
+        description: 'Create your own custom theme',
+        unlockLevel: 25,
         colors: {
-          primary: '#6200EA',
-          secondary: '#3700B3',
-          background: '#FFFFFF',
-          text: '#000000',
-          accent: '#018786'
+          primary: '#3b82f6',
+          secondary: '#64748b',
+          background: '#ffffff',
+          surface: '#f8fafc',
+          text: '#1e293b',
+          textSecondary: '#64748b',
+          success: '#10b981',
+          warning: '#f59e0b',
+          error: '#ef4444',
+          accent: '#8b5cf6'
         },
-        isCustomizable: true
+        fonts: {
+          primary: 'Inter, system-ui, sans-serif',
+          secondary: 'Georgia, serif'
+        },
+        borderRadius: '8px',
+        shadows: {
+          small: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+          medium: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+          large: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
+        },
+        customizable: true
       }
     };
-
-    // Avatar definitions
-    this.avatars = {
-      animals: ['Owl', 'Fox', 'Cat', 'Dog', 'Rabbit', 'Eagle', 'Wolf', 'Bear', 'Lion', 'Tiger', 'Dolphin', 'Whale', 'Shark', 'Turtle', 'Penguin'],
-      colors: ['Blue', 'Green', 'Red', 'Purple', 'Orange', 'Yellow', 'Pink', 'Teal', 'Indigo', 'Crimson', 'Azure', 'Emerald', 'Violet', 'Amber'],
-      accessories: {
-        glasses: { unlockLevel: 4, name: 'Study Glasses', icon: '👓' },
-        graduation_cap: { unlockLevel: 7, name: 'Graduation Cap', icon: '🎓' },
-        bowtie: { unlockLevel: 10, name: 'Scholarly Bowtie', icon: '🎀' },
-        crown: { unlockLevel: 13, name: 'Knowledge Crown', icon: '👑' },
-        wizard_hat: { unlockLevel: 16, name: 'Wisdom Hat', icon: '🧙‍♂️' },
-        superhero_cape: { unlockLevel: 19, name: 'Learning Cape', icon: '🦸‍♂️' }
-      },
-      poses: {
-        confident: { unlockLevel: 7, name: 'Confident Pose', description: 'Ready to tackle any challenge' },
-        thoughtful: { unlockLevel: 11, name: 'Thoughtful Pose', description: 'Deep in concentration' },
-        celebratory: { unlockLevel: 16, name: 'Victory Pose', description: 'Celebrating achievements' }
-      }
-    };
-
-    // Interface customization options
-    this.interfaceOptions = {
-      modalFrames: {
-        standard: { unlockLevel: 1, name: 'Standard Frame' },
-        decorative: { unlockLevel: 5, name: 'Decorative Frame' },
-        geometric: { unlockLevel: 8, name: 'Geometric Frame' },
-        organic: { unlockLevel: 11, name: 'Organic Frame' },
-        futuristic: { unlockLevel: 14, name: 'Futuristic Frame' },
-        artistic: { unlockLevel: 17, name: 'Artistic Frame' }
-      },
-      animations: {
-        subtle: { unlockLevel: 1, name: 'Subtle Animations' },
-        enhanced: { unlockLevel: 6, name: 'Enhanced Animations' },
-        dynamic: { unlockLevel: 12, name: 'Dynamic Animations' },
-        spectacular: { unlockLevel: 18, name: 'Spectacular Animations' }
-      }
-    };
-
-    console.log('🎨 Customization Manager initialized');
   }
 
   /**
-   * Initialize customization system for user
+   * Initialize available layouts
    */
-  async initializeCustomization() {
-    try {
-      console.log('🎨 Initializing customization for user:', await getCurrentUserId());
-      
-      // Load or create user customization preferences
-      let userCustomizations = await this.getUserCustomizations();
-      
-      if (!userCustomizations) {
-        // Create default customizations
-        userCustomizations = await this.createDefaultCustomizations();
-      }
-      
-      // Check for new unlocks based on current level and badges
-      await this.checkForNewUnlocks();
-      
-      console.log('🎨 Customization system initialized');
-      return { success: true, customizations: userCustomizations };
-    } catch (error) {
-      console.error('🎨 Error initializing customization:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Get user's current customization preferences
-   */
-  async getUserCustomizations() {
-    try {
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_customizations')
-        .select('*')
-        .eq('user_id', await getCurrentUserId())
-        .single();
-
-      if (error && error.code !== 'PGRST116') { // Not found error
-        console.error('🎨 Error getting user customizations:', error);
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('🎨 Error in getUserCustomizations:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Create default customization preferences
-   */
-  async createDefaultCustomizations() {
-    try {
-      const defaultCustomizations = {
-        user_id: await getCurrentUserId(),
-        theme_id: 'default',
-        avatar_config: {
-          animal: this.avatars.animals[0], // Owl
-          color: this.avatars.colors[0],   // Blue
-          accessories: [],
-          pose: 'confident'
-        },
-        interface_preferences: {
-          modal_frame: 'standard',
-          animations: 'subtle',
-          sound_effects: false,
-          reduced_motion: false
-        },
-        privacy_settings: {
-          show_in_leaderboards: true,
-          share_achievements: true,
-          anonymous_mode: false
-        },
-        goal_settings: {
-          target_level: 10,
-          weekly_question_goal: 50,
-          daily_streak_goal: 7
-        }
-      };
-
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_customizations')
-        .insert(defaultCustomizations)
-        .select()
-        .single();
-
-      if (error) {
-        console.error('🎨 Error creating default customizations:', error);
-        return null;
-      }
-
-      return data;
-    } catch (error) {
-      console.error('🎨 Error in createDefaultCustomizations:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Check for new unlocks based on level and achievements
-   */
-  async checkForNewUnlocks() {
-    try {
-      const userProgress = await this.xpManager.getUserProgress();
-      const currentLevel = userProgress.current_level || 1;
-      
-      const newUnlocks = {
-        themes: [],
-        avatarAccessories: [],
-        avatarPoses: [],
-        interfaceOptions: []
-      };
-
-      // Check theme unlocks
-      for (const [themeId, theme] of Object.entries(this.themes)) {
-        if (currentLevel >= theme.unlockLevel && !theme.isUnlocked) {
-          newUnlocks.themes.push(theme);
-        }
-      }
-
-      // Check avatar accessory unlocks
-      for (const [accessoryId, accessory] of Object.entries(this.avatars.accessories)) {
-        if (currentLevel >= accessory.unlockLevel) {
-          newUnlocks.avatarAccessories.push({ id: accessoryId, ...accessory });
-        }
-      }
-
-      // Check avatar pose unlocks
-      for (const [poseId, pose] of Object.entries(this.avatars.poses)) {
-        if (currentLevel >= pose.unlockLevel) {
-          newUnlocks.avatarPoses.push({ id: poseId, ...pose });
-        }
-      }
-
-      // Check interface option unlocks
-      for (const category of Object.keys(this.interfaceOptions)) {
-        for (const [optionId, option] of Object.entries(this.interfaceOptions[category])) {
-          if (currentLevel >= option.unlockLevel) {
-            newUnlocks.interfaceOptions.push({ 
-              category, 
-              id: optionId, 
-              ...option 
-            });
-          }
-        }
-      }
-
-      // Award XP for unlocks if any
-      if (newUnlocks.themes.length > 0 || 
-          newUnlocks.avatarAccessories.length > 0 || 
-          newUnlocks.avatarPoses.length > 0 || 
-          newUnlocks.interfaceOptions.length > 0) {
-        
-        const unlockBonus = (newUnlocks.themes.length * 25) + 
-                           (newUnlocks.avatarAccessories.length * 15) + 
-                           (newUnlocks.avatarPoses.length * 20) + 
-                           (newUnlocks.interfaceOptions.length * 10);
-
-        if (unlockBonus > 0) {
-          await this.xpManager.awardXP(await getCurrentUserId(), unlockBonus, {
-            source: 'customization_unlock',
-            unlockCount: Object.values(newUnlocks).flat().length
-          });
-        }
-      }
-
-      return newUnlocks;
-    } catch (error) {
-      console.error('🎨 Error checking for new unlocks:', error);
-      return {};
-    }
-  }
-
-  /**
-   * Update user's theme
-   */
-  async updateTheme() {
-    try {
-      // Verify theme is unlocked
-      const isUnlocked = await this.isThemeUnlocked();
-      if (!isUnlocked) {
-        return { 
-          success: false, 
-          error: 'Theme not unlocked',
-          requiredLevel: this.themes[themeId]?.unlockLevel || 1
-        };
-      }
-
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_customizations')
-        .update({ 
-          theme_id: themeId,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', await getCurrentUserId())
-        .select();
-
-      if (error) {
-        console.error('🎨 Error updating theme:', error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, theme: this.themes[themeId] };
-    } catch (error) {
-      console.error('🎨 Error in updateTheme:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Update user's avatar configuration
-   */
-  async updateAvatar(avatarConfig) {
-    try {
-      // Validate avatar configuration
-      const validation = this.validateAvatarConfig(avatarConfig);
-      if (!validation.isValid) {
-        return {
-          success: false,
-          error: 'Invalid avatar configuration',
-          details: validation.errors
-        };
-      }
-
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_customizations')
-        .update({ 
-          avatar_config: avatarConfig,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', await getCurrentUserId())
-        .select();
-
-      if (error) {
-        console.error('🎨 Error updating avatar:', error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, avatar: avatarConfig };
-    } catch (error) {
-      console.error('🎨 Error in updateAvatar:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Update interface preferences
-   */
-  async updateInterfacePreferences(preferences) {
-    try {
-      const { data, error } = await this.supabaseClient.supabase
-        .from('user_customizations')
-        .update({ 
-          interface_preferences: preferences,
-          updated_at: new Date().toISOString()
-        })
-        .eq('user_id', await getCurrentUserId())
-        .select();
-
-      if (error) {
-        console.error('🎨 Error updating interface preferences:', error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, preferences };
-    } catch (error) {
-      console.error('🎨 Error in updateInterfacePreferences:', error);
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
-   * Check if theme is unlocked for user
-   */
-  async isThemeUnlocked() {
-    try {
-      const theme = this.themes[themeId];
-      if (!theme) return false;
-
-      if (theme.id === 'default') return true;
-
-      const userProgress = await this.xpManager.getUserProgress();
-      const currentLevel = userProgress.current_level || 1;
-
-      return currentLevel >= theme.unlockLevel;
-    } catch (error) {
-      console.error('🎨 Error checking theme unlock:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Validate avatar configuration
-   */
-  async validateAvatarConfig(config) {
-    const errors = [];
-    
-    // Check animal
-    if (!this.avatars.animals.includes(config.animal)) {
-      errors.push('Invalid animal selection');
-    }
-
-    // Check color
-    if (!this.avatars.colors.includes(config.color)) {
-      errors.push('Invalid color selection');
-    }
-
-    // Check accessories
-    if (config.accessories && Array.isArray(config.accessories)) {
-      const userProgress = await this.xpManager.getUserProgress();
-      const currentLevel = userProgress.current_level || 1;
-
-      for (const accessoryId of config.accessories) {
-        const accessory = this.avatars.accessories[accessoryId];
-        if (!accessory) {
-          errors.push(`Invalid accessory: ${accessoryId}`);
-        } else if (currentLevel < accessory.unlockLevel) {
-          errors.push(`Accessory not unlocked: ${accessory.name} (requires level ${accessory.unlockLevel})`);
-        }
-      }
-    }
-
-    // Check pose
-    if (config.pose) {
-      const pose = this.avatars.poses[config.pose];
-      if (!pose) {
-        errors.push('Invalid pose selection');
-      } else {
-        const userProgress = await this.xpManager.getUserProgress();
-        const currentLevel = userProgress.current_level || 1;
-        
-        if (currentLevel < pose.unlockLevel) {
-          errors.push(`Pose not unlocked: ${pose.name} (requires level ${pose.unlockLevel})`);
-        }
-      }
-    }
-
+  _initializeLayouts() {
     return {
-      isValid: errors.length === 0,
-      errors
+      standard: {
+        id: 'standard',
+        name: 'Standard',
+        description: 'Traditional quiz layout',
+        unlockLevel: 1,
+        settings: {
+          questionPosition: 'top',
+          answersLayout: 'vertical',
+          progressBarPosition: 'top',
+          timerPosition: 'top-right',
+          feedbackPosition: 'center'
+        }
+      },
+      compact: {
+        id: 'compact',
+        name: 'Compact',
+        description: 'Space-efficient layout',
+        unlockLevel: 5,
+        settings: {
+          questionPosition: 'top',
+          answersLayout: 'horizontal',
+          progressBarPosition: 'bottom',
+          timerPosition: 'top-left',
+          feedbackPosition: 'bottom'
+        }
+      },
+      focused: {
+        id: 'focused',
+        name: 'Focused',
+        description: 'Minimal distractions',
+        unlockLevel: 10,
+        settings: {
+          questionPosition: 'center',
+          answersLayout: 'vertical',
+          progressBarPosition: 'hidden',
+          timerPosition: 'hidden',
+          feedbackPosition: 'overlay'
+        }
+      },
+      dashboard: {
+        id: 'dashboard',
+        name: 'Dashboard',
+        description: 'Information-rich layout',
+        unlockLevel: 15,
+        settings: {
+          questionPosition: 'left',
+          answersLayout: 'vertical',
+          progressBarPosition: 'right',
+          timerPosition: 'right',
+          feedbackPosition: 'right',
+          showStats: true,
+          showHints: true
+        }
+      }
     };
   }
 
   /**
-   * Get all available customization options for user
+   * Get user's current customization settings
    */
-  async getAvailableCustomizations() {
+  async getUserCustomization(userId) {
     try {
-      const userProgress = await this.xpManager.getUserProgress();
-      const currentLevel = userProgress.current_level || 1;
+      const { data, error } = await window.supabaseQuery('user_customizations', 'select', null, { user_id: userId });
 
-      const available = {
-        themes: {},
-        avatars: {
-          animals: this.avatars.animals,
-          colors: this.avatars.colors,
-          accessories: {},
-          poses: {}
-        },
-        interface: {}
+      if (error) {
+        console.error('Error fetching user customization:', error);
+        return this.getDefaultCustomization();
+      }
+
+      if (!data || data.length === 0) {
+        return this.getDefaultCustomization();
+      }
+
+      const customization = data[0];
+      return {
+        theme: customization.theme_id || 'default',
+        layout: customization.layout_id || 'standard',
+        customColors: customization.custom_colors || {},
+        preferences: customization.preferences || {},
+        lastUpdated: customization.updated_at
       };
 
-      // Add available themes
+    } catch (error) {
+      console.error('Exception in getUserCustomization:', error);
+      return this.getDefaultCustomization();
+    }
+  }
+
+  /**
+   * Update user customization settings
+   */
+  async updateUserCustomization(userId, customization) {
+    try {
+      const updates = {
+        user_id: userId,
+        theme_id: customization.theme,
+        layout_id: customization.layout,
+        custom_colors: customization.customColors || {},
+        preferences: customization.preferences || {},
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await window.supabaseQuery('user_customizations', 'upsert', updates);
+
+      if (error) {
+        console.error('Error updating user customization:', error);
+        return { success: false, error: error.message };
+      }
+
+      // Apply the customization
+      await this.applyCustomization(customization);
+
+      return { success: true, data: updates };
+
+    } catch (error) {
+      console.error('Exception in updateUserCustomization:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get available themes for user based on level
+   */
+  async getAvailableThemes(userId) {
+    try {
+      const userLevel = await this.getUserLevel(userId);
+      const availableThemes = [];
+
       for (const [themeId, theme] of Object.entries(this.themes)) {
-        available.themes[themeId] = {
+        const isUnlocked = userLevel >= theme.unlockLevel;
+        availableThemes.push({
           ...theme,
-          isUnlocked: currentLevel >= theme.unlockLevel
-        };
+          isUnlocked: isUnlocked,
+          lockReason: isUnlocked ? null : `Unlock at level ${theme.unlockLevel}`
+        });
       }
 
-      // Add available avatar accessories
-      for (const [accessoryId, accessory] of Object.entries(this.avatars.accessories)) {
-        available.avatars.accessories[accessoryId] = {
-          ...accessory,
-          isUnlocked: currentLevel >= accessory.unlockLevel
-        };
+      return { success: true, themes: availableThemes };
+
+    } catch (error) {
+      console.error('Error getting available themes:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get available layouts for user based on level
+   */
+  async getAvailableLayouts(userId) {
+    try {
+      const userLevel = await this.getUserLevel(userId);
+      const availableLayouts = [];
+
+      for (const [layoutId, layout] of Object.entries(this.layouts)) {
+        const isUnlocked = userLevel >= layout.unlockLevel;
+        availableLayouts.push({
+          ...layout,
+          isUnlocked: isUnlocked,
+          lockReason: isUnlocked ? null : `Unlock at level ${layout.unlockLevel}`
+        });
       }
 
-      // Add available avatar poses
-      for (const [poseId, pose] of Object.entries(this.avatars.poses)) {
-        available.avatars.poses[poseId] = {
-          ...pose,
-          isUnlocked: currentLevel >= pose.unlockLevel
-        };
+      return { success: true, layouts: availableLayouts };
+
+    } catch (error) {
+      console.error('Error getting available layouts:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Apply customization to the interface
+   */
+  async applyCustomization(customization) {
+    try {
+      const theme = this.themes[customization.theme] || this.themes.default;
+      const layout = this.layouts[customization.layout] || this.layouts.standard;
+
+      // Apply theme colors
+      this.applyThemeColors(theme, customization.customColors);
+      
+      // Apply layout settings
+      this.applyLayoutSettings(layout);
+      
+      // Apply user preferences
+      this.applyUserPreferences(customization.preferences);
+
+      this.currentTheme = customization.theme;
+      this.currentLayout = customization.layout;
+
+      return { success: true };
+
+    } catch (error) {
+      console.error('Error applying customization:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Apply theme colors to CSS custom properties
+   */
+  applyThemeColors(theme, customColors = {}) {
+    const colors = { ...theme.colors, ...customColors };
+    const root = document.documentElement;
+
+    // Apply color variables
+    Object.entries(colors).forEach(([key, value]) => {
+      root.style.setProperty(`--color-${key}`, value);
+    });
+
+    // Apply font variables
+    Object.entries(theme.fonts).forEach(([key, value]) => {
+      root.style.setProperty(`--font-${key}`, value);
+    });
+
+    // Apply other theme properties
+    root.style.setProperty('--border-radius', theme.borderRadius);
+    
+    Object.entries(theme.shadows).forEach(([key, value]) => {
+      root.style.setProperty(`--shadow-${key}`, value);
+    });
+  }
+
+  /**
+   * Apply layout settings to interface elements
+   */
+  applyLayoutSettings(layout) {
+    const settings = layout.settings;
+    const root = document.documentElement;
+
+    // Apply layout CSS classes
+    document.body.className = `layout-${layout.id}`;
+    
+    // Apply layout variables
+    Object.entries(settings).forEach(([key, value]) => {
+      root.style.setProperty(`--layout-${key}`, value);
+    });
+  }
+
+  /**
+   * Apply user preferences
+   */
+  applyUserPreferences(preferences) {
+    const root = document.documentElement;
+
+    // Apply animation preferences
+    if (preferences.reduceMotion) {
+      root.style.setProperty('--animation-duration', '0.01s');
+    }
+
+    // Apply font size preferences
+    if (preferences.fontSize) {
+      root.style.setProperty('--font-size-base', preferences.fontSize);
+    }
+
+    // Apply contrast preferences
+    if (preferences.highContrast) {
+      root.classList.add('high-contrast');
+    }
+  }
+
+  /**
+   * Get user level for theme/layout unlocks
+   */
+  async getUserLevel(userId) {
+    try {
+      const { data, error } = await window.supabaseQuery('user_progress', 'select', 'current_level', { user_id: userId });
+
+      if (error || !data || data.length === 0) {
+        return 1; // Default level
       }
 
-      // Add available interface options
-      for (const [category, options] of Object.entries(this.interfaceOptions)) {
-        available.interface[category] = {};
-        for (const [optionId, option] of Object.entries(options)) {
-          available.interface[category][optionId] = {
-            ...option,
-            isUnlocked: currentLevel >= option.unlockLevel
-          };
-        }
+      return data[0].current_level || 1;
+
+    } catch (error) {
+      console.error('Error getting user level:', error);
+      return 1;
+    }
+  }
+
+  /**
+   * Get default customization settings
+   */
+  getDefaultCustomization() {
+    return {
+      theme: 'default',
+      layout: 'standard',
+      customColors: {},
+      preferences: {
+        fontSize: '16px',
+        reduceMotion: false,
+        highContrast: false
       }
+    };
+  }
+
+  /**
+   * Create custom theme
+   */
+  async createCustomTheme(userId, themeName, colors) {
+    try {
+      const customTheme = {
+        id: `custom_${Date.now()}`,
+        name: themeName,
+        description: 'Custom user theme',
+        unlockLevel: 25,
+        colors: colors,
+        fonts: this.themes.default.fonts,
+        borderRadius: '8px',
+        shadows: this.themes.default.shadows,
+        isCustom: true,
+        createdBy: userId
+      };
+
+      // Save custom theme
+      const { data, error } = await window.supabaseQuery('custom_themes', 'insert', {
+        user_id: userId,
+        theme_id: customTheme.id,
+        theme_data: customTheme,
+        created_at: new Date().toISOString()
+      });
+
+      if (error) {
+        console.error('Error creating custom theme:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, theme: customTheme };
+
+    } catch (error) {
+      console.error('Exception in createCustomTheme:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Get customization summary for popup
+   */
+  async getCustomizationSummary(userId) {
+    try {
+      const customization = await this.getUserCustomization(userId);
+      const currentTheme = this.themes[customization.theme];
+      const currentLayout = this.layouts[customization.layout];
 
       return {
         success: true,
-        customizations: available,
-        userLevel: currentLevel
+        summary: {
+          currentTheme: {
+            name: currentTheme.name,
+            description: currentTheme.description
+          },
+          currentLayout: {
+            name: currentLayout.name,
+            description: currentLayout.description
+          },
+          customizationLevel: await this.getUserLevel(userId),
+          availableThemes: Object.keys(this.themes).length,
+          availableLayouts: Object.keys(this.layouts).length
+        }
       };
+
     } catch (error) {
-      console.error('🎨 Error getting available customizations:', error);
+      console.error('Error getting customization summary:', error);
       return { success: false, error: error.message };
     }
   }
 
   /**
-   * Apply theme to quiz interface
+   * Reset customization to defaults
    */
-  applyThemeToInterface(themeId) {
+  async resetCustomization(userId) {
     try {
-      const theme = this.themes[themeId];
-      if (!theme) {
-        console.error('🎨 Theme not found:', themeId);
-        return;
+      const defaultCustomization = this.getDefaultCustomization();
+      const result = await this.updateUserCustomization(userId, defaultCustomization);
+      
+      if (result.success) {
+        await this.applyCustomization(defaultCustomization);
       }
 
-      // Create CSS custom properties for the theme
-      const root = document.documentElement;
-      root.style.setProperty('--qas-blue', theme.colors.primary);
-      root.style.setProperty('--qas-dark-text', theme.colors.text);
-      root.style.setProperty('--qas-light-text', theme.colors.secondary);
-      root.style.setProperty('--qas-background', theme.colors.background);
-      root.style.setProperty('--qas-success', theme.colors.accent);
+      return result;
 
-      console.log('🎨 Theme applied:', theme.name);
-      return { success: true, theme: theme.name };
     } catch (error) {
-      console.error('🎨 Error applying theme:', error);
+      console.error('Error resetting customization:', error);
       return { success: false, error: error.message };
     }
   }
 
   /**
-   * Generate avatar display
+   * Export user customization settings
    */
-  generateAvatarDisplay(avatarConfig) {
+  async exportCustomization(userId) {
     try {
-      const { animal, color, accessories, pose } = avatarConfig;
-      
-      // Create avatar representation
-      const avatar = {
-        display: `${color} ${animal}`,
-        emoji: this.getAnimalEmoji(animal),
-        accessories: accessories?.map(id => this.avatars.accessories[id]) || [],
-        pose: pose || 'confident',
-        style: {
-          color: this.getColorCode(color),
-          pose: pose || 'confident'
-        }
+      const customization = await this.getUserCustomization(userId);
+      const exportData = {
+        version: '1.0',
+        userId: userId,
+        theme: customization.theme,
+        layout: customization.layout,
+        customColors: customization.customColors,
+        preferences: customization.preferences,
+        exportedAt: new Date().toISOString()
       };
 
-      return avatar;
+      return { success: true, data: exportData };
+
     } catch (error) {
-      console.error('🎨 Error generating avatar display:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Get animal emoji representation
-   */
-  getAnimalEmoji(animal) {
-    const emojiMap = {
-      'Owl': '🦉', 'Fox': '🦊', 'Cat': '🐱', 'Dog': '🐶', 'Rabbit': '🐰',
-      'Eagle': '🦅', 'Wolf': '🐺', 'Bear': '🐻', 'Lion': '🦁', 'Tiger': '🐯',
-      'Dolphin': '🐬', 'Whale': '🐋', 'Shark': '🦈', 'Turtle': '🐢', 'Penguin': '🐧'
-    };
-    return emojiMap[animal] || '🐾';
-  }
-
-  /**
-   * Get color code for avatar
-   */
-  getColorCode(color) {
-    const colorMap = {
-      'Blue': '#007BFF', 'Green': '#28a745', 'Red': '#dc3545', 'Purple': '#6f42c1',
-      'Orange': '#fd7e14', 'Yellow': '#ffc107', 'Pink': '#e83e8c', 'Teal': '#20c997',
-      'Indigo': '#6610f2', 'Crimson': '#dc143c', 'Azure': '#007fff', 'Emerald': '#50c878',
-      'Violet': '#8a2be2', 'Amber': '#ffbf00'
-    };
-    return colorMap[color] || '#007BFF';
-  }
-
-  /**
-   * Get customization summary for display
-   */
-  async getCustomizationSummary() {
-    try {
-      const [userCustomizations, availableOptions] = await Promise.all([
-        this.getUserCustomizations(),
-        this.getAvailableCustomizations()
-      ]);
-
-      if (!userCustomizations) {
-        return { success: false, error: 'No customizations found' };
-      }
-
-      const summary = {
-        currentTheme: this.themes[userCustomizations.theme_id],
-        currentAvatar: this.generateAvatarDisplay(userCustomizations.avatar_config),
-        interfaceSettings: userCustomizations.interface_preferences,
-        availableOptions: availableOptions.customizations,
-        unlockedCount: this.countUnlockedOptions(availableOptions.customizations),
-        totalCount: this.countTotalOptions()
-      };
-
-      return { success: true, customization: summary };
-    } catch (error) {
-      console.error('🎨 Error getting customization summary:', error);
+      console.error('Error exporting customization:', error);
       return { success: false, error: error.message };
     }
   }
 
   /**
-   * Count unlocked customization options
+   * Import user customization settings
    */
-  countUnlockedOptions(options) {
-    let count = 0;
-    
-    // Count themes
-    for (const theme of Object.values(options.themes)) {
-      if (theme.isUnlocked) count++;
-    }
-    
-    // Count accessories
-    for (const accessory of Object.values(options.avatars.accessories)) {
-      if (accessory.isUnlocked) count++;
-    }
-    
-    // Count poses
-    for (const pose of Object.values(options.avatars.poses)) {
-      if (pose.isUnlocked) count++;
-    }
-    
-    // Count interface options
-    for (const category of Object.values(options.interface)) {
-      for (const option of Object.values(category)) {
-        if (option.isUnlocked) count++;
-      }
-    }
-    
-    return count;
-  }
-
-  /**
-   * Count total customization options
-   */
-  countTotalOptions() {
-    return Object.keys(this.themes).length +
-           Object.keys(this.avatars.accessories).length +
-           Object.keys(this.avatars.poses).length +
-           Object.values(this.interfaceOptions).reduce((sum, category) => 
-             sum + Object.keys(category).length, 0);
-  }
-
-  /**
-   * Get next unlock information
-   */
-  async getNextUnlocks() {
+  async importCustomization(userId, importData) {
     try {
-      const userProgress = await this.xpManager.getUserProgress();
-      const currentLevel = userProgress.current_level || 1;
-      
-      const nextUnlocks = [];
-      
-      // Check themes
-      for (const theme of Object.values(this.themes)) {
-        if (theme.unlockLevel > currentLevel && theme.unlockLevel <= currentLevel + 5) {
-          nextUnlocks.push({
-            type: 'theme',
-            name: theme.name,
-            level: theme.unlockLevel,
-            description: theme.description
-          });
-        }
+      if (!importData.version || importData.version !== '1.0') {
+        return { success: false, error: 'Invalid import data version' };
       }
-      
-      // Check accessories
-      for (const [id, accessory] of Object.entries(this.avatars.accessories)) {
-        if (accessory.unlockLevel > currentLevel && accessory.unlockLevel <= currentLevel + 5) {
-          nextUnlocks.push({
-            type: 'accessory',
-            name: accessory.name,
-            level: accessory.unlockLevel,
-            icon: accessory.icon
-          });
-        }
-      }
-      
-      // Sort by level
-      nextUnlocks.sort((a, b) => a.level - b.level);
-      
-      return { success: true, unlocks: nextUnlocks.slice(0, 5) }; // Show next 5 unlocks
+
+      const customization = {
+        theme: importData.theme,
+        layout: importData.layout,
+        customColors: importData.customColors || {},
+        preferences: importData.preferences || {}
+      };
+
+      const result = await this.updateUserCustomization(userId, customization);
+      return result;
+
     } catch (error) {
-      console.error('🎨 Error getting next unlocks:', error);
+      console.error('Error importing customization:', error);
       return { success: false, error: error.message };
     }
   }
 }
 
-// Export for global access
-if (typeof window !== 'undefined') {
-  window.CustomizationManager = CustomizationManager;
-} 
+// Make CustomizationManager globally accessible
+window.CustomizationManager = CustomizationManager; 
