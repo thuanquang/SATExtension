@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Global Progress & XP Bar Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            border: 2px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        .xp-bar-demo {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .xp-progress {
+            height: 100%;
+            background: #007bff;
+            border-radius: 10px;
+            transition: width 0.5s ease-out;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #bee5eb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎓 Global Progress & XP Bar Test</h1>
+    
+    <div class="info-box">
+        <h3>Test Purpose:</h3>
+        <p>1. <strong>Global Progress Test:</strong> Verify that user progress is consistent across different websites (same user ID)</p>
+        <p>2. <strong>XP Bar Test:</strong> Verify that the XP progress bar fills proportionally to actual progress</p>
+        <p><strong>Instructions:</strong> Open this page on different domains (e.g., localhost, GitHub, YouTube) and check if the same user ID is returned and progress is consistent.</p>
+    </div>
+
+    <div class="test-section">
+        <h2>🆔 User ID & Storage Test</h2>
+        <button class="test-button" onclick="testUserId()">Test User ID (Global)</button>
+        <button class="test-button" onclick="testLocalStorage()">Test Local Storage (Domain-Specific)</button>
+        <button class="test-button" onclick="clearStorage()">Clear All Storage</button>
+        <div id="user-id-result" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎮 XP Progress Calculation Test</h2>
+        <button class="test-button" onclick="testXPCalculation()">Test XP Progress Math</button>
+        <button class="test-button" onclick="simulateProgress()">Simulate Different Progress Levels</button>
+        <div id="xp-calc-result" class="test-result"></div>
+        <div class="xp-bar-demo">
+            <div id="demo-xp-bar" class="xp-progress" style="width: 0%;"></div>
+        </div>
+        <div id="xp-display">Level 1 - 0/100 XP to Level 2 (0%)</div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Extension Integration Test</h2>
+        <button class="test-button" onclick="testExtensionConnection()">Test Extension Connection</button>
+        <button class="test-button" onclick="getExtensionStats()">Get Extension Stats</button>
+        <button class="test-button" onclick="forceQuizTest()">Force Quiz (if extension loaded)</button>
+        <div id="extension-result" class="test-result"></div>
+    </div>
+
+    <script>
+        let testResults = {};
+
+        // Test User ID consistency (should be global now)
+        async function testUserId() {
+            const resultDiv = document.getElementById('user-id-result');
+            try {
+                resultDiv.textContent = 'Testing user ID generation and storage...\n';
+
+                // Test Chrome extension storage (global)
+                let globalUserId = null;
+                try {
+                    if (typeof chrome !== 'undefined' && chrome.storage) {
+                        const result = await chrome.storage.local.get(['sat_quiz_user_id']);
+                        globalUserId = result.sat_quiz_user_id;
+                        
+                        if (!globalUserId) {
+                            globalUserId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                            await chrome.storage.local.set({ sat_quiz_user_id: globalUserId });
+                        }
+                    }
+                } catch (chromeError) {
+                    resultDiv.textContent += `Chrome storage error: ${chromeError.message}\n`;
+                }
+
+                // Test localStorage (domain-specific)
+                let localUserId = localStorage.getItem('sat_quiz_user_id');
+                if (!localUserId) {
+                    localUserId = 'local_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    localStorage.setItem('sat_quiz_user_id', localUserId);
+                }
+
+                const results = {
+                    domain: window.location.hostname,
+                    url: window.location.href,
+                    globalUserId: globalUserId || 'Not available (Chrome extension required)',
+                    localUserId: localUserId,
+                    timestamp: new Date().toISOString()
+                };
+
+                testResults.userId = results;
+                resultDiv.textContent = JSON.stringify(results, null, 2);
+                resultDiv.className = 'test-result success';
+
+            } catch (error) {
+                resultDiv.textContent = `Error: ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Test localStorage vs Chrome storage
+        async function testLocalStorage() {
+            const resultDiv = document.getElementById('user-id-result');
+            try {
+                const localData = {
+                    domain: window.location.hostname,
+                    localStorage_user_id: localStorage.getItem('sat_quiz_user_id'),
+                    localStorage_test: localStorage.getItem('test_value') || 'not set'
+                };
+
+                // Set a test value
+                localStorage.setItem('test_value', `set_on_${window.location.hostname}_at_${Date.now()}`);
+                localData.localStorage_test_after = localStorage.getItem('test_value');
+
+                resultDiv.textContent = 'LocalStorage Test (Domain-Specific):\n' + JSON.stringify(localData, null, 2);
+                resultDiv.className = 'test-result';
+
+            } catch (error) {
+                resultDiv.textContent = `LocalStorage Error: ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Clear all storage
+        async function clearStorage() {
+            try {
+                localStorage.clear();
+                if (typeof chrome !== 'undefined' && chrome.storage) {
+                    await chrome.storage.local.clear();
+                }
+                document.getElementById('user-id-result').textContent = 'All storage cleared!';
+                document.getElementById('user-id-result').className = 'test-result success';
+            } catch (error) {
+                document.getElementById('user-id-result').textContent = `Clear Error: ${error.message}`;
+                document.getElementById('user-id-result').className = 'test-result error';
+            }
+        }
+
+        // Test XP calculation logic
+        function testXPCalculation() {
+            const resultDiv = document.getElementById('xp-calc-result');
+            
+            // Test different XP scenarios
+            const testCases = [
+                { totalXP: 0, expectedLevel: 1, description: 'New user' },
+                { totalXP: 50, expectedLevel: 1, description: 'Halfway to level 2' },
+                { totalXP: 100, expectedLevel: 2, description: 'Just reached level 2' },
+                { totalXP: 150, expectedLevel: 2, description: 'Halfway to level 3' },
+                { totalXP: 500, expectedLevel: 5, description: 'Level 5' },
+                { totalXP: 600, expectedLevel: 6, description: 'Level 6 (starts requiring 200 XP per level)' },
+                { totalXP: 1500, expectedLevel: 10, description: 'Level 10' }
+            ];
+
+            let results = 'XP Calculation Test Results:\n\n';
+
+            testCases.forEach(testCase => {
+                const { level, progressXP, requiredXP, progressPercentage } = calculateXPProgress(testCase.totalXP);
+                
+                results += `${testCase.description}:\n`;
+                results += `  Total XP: ${testCase.totalXP}\n`;
+                results += `  Calculated Level: ${level} (Expected: ${testCase.expectedLevel})\n`;
+                results += `  Progress: ${progressXP}/${requiredXP} XP (${progressPercentage.toFixed(1)}%)\n\n`;
+            });
+
+            resultDiv.textContent = results;
+            resultDiv.className = 'test-result';
+        }
+
+        // Calculate XP progress (same logic as the extension)
+        function calculateXPProgress(totalXP) {
+            // Calculate level thresholds (same as XPManager)
+            const thresholds = [0]; // Level 1 starts at 0 XP
+            let currentXP = 0;
+            
+            for (let level = 2; level <= 50; level++) {
+                if (level <= 5) {
+                    currentXP += 100;
+                } else if (level <= 10) {
+                    currentXP += 200;
+                } else if (level <= 15) {
+                    currentXP += 300;
+                } else if (level <= 20) {
+                    currentXP += 400;
+                } else {
+                    currentXP += 500;
+                }
+                thresholds.push(currentXP);
+            }
+
+            // Find current level
+            let currentLevel = 1;
+            for (let level = thresholds.length - 1; level >= 1; level--) {
+                if (totalXP >= thresholds[level]) {
+                    currentLevel = level;
+                    break;
+                }
+            }
+
+            const currentLevelXP = thresholds[currentLevel];
+            const nextLevelXP = thresholds[currentLevel + 1] || thresholds[thresholds.length - 1];
+            const progressXP = Math.max(0, totalXP - currentLevelXP);
+            const requiredXP = Math.max(1, nextLevelXP - currentLevelXP);
+            const progressPercentage = Math.min(100, Math.max(0, (progressXP / requiredXP) * 100));
+
+            return { level: currentLevel, progressXP, requiredXP, progressPercentage };
+        }
+
+        // Simulate different progress levels
+        function simulateProgress() {
+            const progressLevels = [0, 25, 50, 75, 90, 100];
+            let currentIndex = 0;
+
+            const simulate = () => {
+                const percentage = progressLevels[currentIndex];
+                const xpBar = document.getElementById('demo-xp-bar');
+                const xpDisplay = document.getElementById('xp-display');
+                
+                // Simulate a Level 3 character with different progress percentages
+                const baseXP = 200; // Level 3 starts at 200 XP
+                const levelXP = 100; // Level 3 requires 100 XP to reach Level 4
+                const progressXP = Math.floor((percentage / 100) * levelXP);
+                const totalXP = baseXP + progressXP;
+                
+                xpBar.style.width = percentage + '%';
+                xpDisplay.textContent = `Level 3 - ${progressXP}/${levelXP} XP to Level 4 (${percentage}%)`;
+                
+                // Color coding
+                if (percentage < 25) {
+                    xpBar.style.backgroundColor = '#ff6b35';
+                } else if (percentage < 50) {
+                    xpBar.style.backgroundColor = '#ff9500';
+                } else if (percentage < 75) {
+                    xpBar.style.backgroundColor = '#3498db';
+                } else {
+                    xpBar.style.backgroundColor = '#28a745';
+                }
+                
+                currentIndex = (currentIndex + 1) % progressLevels.length;
+            };
+
+            // Animate through different progress levels
+            const interval = setInterval(simulate, 1000);
+            simulate(); // Start immediately
+            
+            // Stop after one full cycle
+            setTimeout(() => clearInterval(interval), progressLevels.length * 1000);
+        }
+
+        // Test extension connection
+        async function testExtensionConnection() {
+            const resultDiv = document.getElementById('extension-result');
+            try {
+                resultDiv.textContent = 'Testing extension connection...\n';
+
+                if (typeof chrome === 'undefined' || !chrome.runtime) {
+                    throw new Error('Chrome extension API not available');
+                }
+
+                const response = await chrome.runtime.sendMessage({ action: 'testBackground' });
+                resultDiv.textContent += `Background script: ${JSON.stringify(response)}\n`;
+
+                const contentResponse = await chrome.runtime.sendMessage({ action: 'testContent' });
+                resultDiv.textContent += `Content script: ${JSON.stringify(contentResponse)}\n`;
+
+                resultDiv.className = 'test-result success';
+
+            } catch (error) {
+                resultDiv.textContent = `Extension connection failed: ${error.message}\n`;
+                resultDiv.textContent += 'This is normal if the extension is not installed or this page is not supported.';
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Get extension stats
+        async function getExtensionStats() {
+            const resultDiv = document.getElementById('extension-result');
+            try {
+                if (typeof chrome === 'undefined' || !chrome.runtime) {
+                    throw new Error('Chrome extension API not available');
+                }
+
+                const basicStats = await chrome.runtime.sendMessage({ action: 'getStats' });
+                const gamificationStats = await chrome.runtime.sendMessage({ action: 'getGamificationStats' });
+
+                const results = {
+                    domain: window.location.hostname,
+                    basicStats,
+                    gamificationStats
+                };
+
+                resultDiv.textContent = 'Extension Stats:\n' + JSON.stringify(results, null, 2);
+                resultDiv.className = 'test-result success';
+
+            } catch (error) {
+                resultDiv.textContent = `Failed to get extension stats: ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Force quiz test
+        async function forceQuizTest() {
+            const resultDiv = document.getElementById('extension-result');
+            try {
+                if (typeof chrome === 'undefined' || !chrome.runtime) {
+                    throw new Error('Chrome extension API not available');
+                }
+
+                const response = await chrome.runtime.sendMessage({ action: 'forceQuiz' });
+                resultDiv.textContent = 'Force quiz result:\n' + JSON.stringify(response, null, 2);
+                resultDiv.className = response.success ? 'test-result success' : 'test-result error';
+
+            } catch (error) {
+                resultDiv.textContent = `Force quiz failed: ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Auto-run user ID test on page load
+        window.addEventListener('load', () => {
+            console.log('🎓 Global Progress Test Page Loaded');
+            testUserId();
+        });
+    </script>
+</body>
+</html> 

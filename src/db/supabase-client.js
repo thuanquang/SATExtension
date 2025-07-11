@@ -3,22 +3,52 @@
 
 // Global helper functions
 window.ensureAuth = async function() {
-  // For content script usage, we'll use a simple user ID system
-  let userId = localStorage.getItem('sat_quiz_user_id');
-  if (!userId) {
-    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('sat_quiz_user_id', userId);
+  // For content script usage, we'll use Chrome extension storage for global user ID
+  try {
+    const result = await chrome.storage.local.get(['sat_quiz_user_id']);
+    let userId = result.sat_quiz_user_id;
+    
+    if (!userId) {
+      userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      await chrome.storage.local.set({ sat_quiz_user_id: userId });
+      console.log('🎓 Created new global user ID:', userId);
+    }
+    
+    return { id: userId };
+  } catch (error) {
+    console.error('Error with Chrome storage, falling back to localStorage:', error);
+    // Fallback to localStorage if Chrome storage fails
+    let userId = localStorage.getItem('sat_quiz_user_id');
+    if (!userId) {
+      userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('sat_quiz_user_id', userId);
+    }
+    return { id: userId };
   }
-  return { id: userId };
 };
 
 window.getCurrentUserId = async function() {
-  let userId = localStorage.getItem('sat_quiz_user_id');
-  if (!userId) {
-    userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem('sat_quiz_user_id', userId);
+  try {
+    const result = await chrome.storage.local.get(['sat_quiz_user_id']);
+    let userId = result.sat_quiz_user_id;
+    
+    if (!userId) {
+      userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      await chrome.storage.local.set({ sat_quiz_user_id: userId });
+      console.log('🎓 Created new global user ID:', userId);
+    }
+    
+    return userId;
+  } catch (error) {
+    console.error('Error with Chrome storage, falling back to localStorage:', error);
+    // Fallback to localStorage if Chrome storage fails
+    let userId = localStorage.getItem('sat_quiz_user_id');
+    if (!userId) {
+      userId = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('sat_quiz_user_id', userId);
+    }
+    return userId;
   }
-  return userId;
 };
 
 // Simple database operations

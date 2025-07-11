@@ -325,22 +325,39 @@ class XPManager {
    * Enrich progress data with calculated fields
    */
   _enrichProgressData(progress) {
-    const currentLevelXP = this.getXPForLevel(progress.current_level);
-    const nextLevelXP = this.getXPForLevel(progress.current_level + 1);
-    const progressXP = progress.total_xp - currentLevelXP;
-    const requiredXP = nextLevelXP - currentLevelXP;
+    const currentLevel = progress.current_level || 1;
+    const totalXP = progress.total_xp || 0;
+    
+    // Calculate XP thresholds using the same logic as the class method
+    const currentLevelXP = this.getXPForLevel(currentLevel);
+    const nextLevelXP = this.getXPForLevel(currentLevel + 1);
+    
+    // Calculate progress within current level
+    const progressXP = Math.max(0, totalXP - currentLevelXP);
+    const requiredXP = Math.max(1, nextLevelXP - currentLevelXP); // Avoid division by zero
+    const progressPercentage = Math.min(100, Math.max(0, (progressXP / requiredXP) * 100));
+    
+    console.log('🎮 XPManager - Enriching progress data:', {
+      currentLevel,
+      totalXP,
+      currentLevelXP,
+      nextLevelXP,
+      progressXP,
+      requiredXP,
+      progressPercentage: progressPercentage.toFixed(2)
+    });
     
     return {
       ...progress,
-      totalXP: progress.total_xp,
-      currentLevel: progress.current_level,
-      questionsAnswered: progress.questions_answered,
-      correctAnswers: progress.questions_correct,
-      currentStreak: progress.current_streak,
-      longestStreak: progress.longest_streak,
+      totalXP: totalXP,
+      currentLevel: currentLevel,
+      questionsAnswered: progress.questions_answered || 0,
+      correctAnswers: progress.questions_correct || 0,
+      currentStreak: progress.current_streak || 0,
+      longestStreak: progress.longest_streak || 0,
       progressXP: progressXP,
       requiredXP: requiredXP,
-      progressPercentage: (progressXP / requiredXP) * 100,
+      progressPercentage: progressPercentage,
       nextLevelXP: nextLevelXP,
       accuracy: progress.questions_answered > 0 ? (progress.questions_correct / progress.questions_answered) * 100 : 0
     };

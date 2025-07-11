@@ -151,27 +151,103 @@ function displayGamificationStats(gamificationData) {
 
 function updateXPDisplay(xpData) {
   try {
+    console.log('🎮 Updating XP display with data:', xpData);
+    
     const xpElement = document.getElementById('current-xp');
     const levelElement = document.getElementById('current-level');
     const progressElement = document.getElementById('xp-progress');
     const progressBarElement = document.getElementById('xp-progress-bar');
     
+    // Update XP and level display
     if (xpElement) xpElement.textContent = (xpData.current || 0).toLocaleString();
     if (levelElement) levelElement.textContent = xpData.level || 1;
     
-    if (progressElement && xpData.nextLevelXP) {
-      const currentProgress = xpData.current || 0;
-      const nextLevel = (xpData.level || 1) + 1;
-      progressElement.textContent = `${currentProgress}/${xpData.nextLevelXP} XP to Level ${nextLevel}`;
+    // Calculate progress more carefully
+    const currentXP = xpData.current || 0;
+    const nextLevelXP = xpData.nextLevelXP || 100;
+    const currentLevel = xpData.level || 1;
+    
+    // Calculate XP needed for current level (start of current level)
+    let currentLevelStartXP = 0;
+    if (currentLevel > 1) {
+      // Progressive thresholds: 1-5 (100 XP each), 6-10 (200 XP each), etc.
+      for (let level = 2; level <= currentLevel; level++) {
+        if (level <= 5) {
+          currentLevelStartXP += 100;
+        } else if (level <= 10) {
+          currentLevelStartXP += 200;
+        } else if (level <= 15) {
+          currentLevelStartXP += 300;
+        } else if (level <= 20) {
+          currentLevelStartXP += 400;
+        } else {
+          currentLevelStartXP += 500;
+        }
+      }
     }
     
+    // Calculate progress within current level
+    const progressXP = Math.max(0, currentXP - currentLevelStartXP);
+    const requiredXP = Math.max(1, nextLevelXP - currentLevelStartXP); // Avoid division by zero
+    const progressPercentage = Math.min(100, Math.max(0, (progressXP / requiredXP) * 100));
+    
+    console.log('🎮 XP Progress Calculation:', {
+      currentXP,
+      currentLevel,
+      currentLevelStartXP,
+      nextLevelXP,
+      progressXP,
+      requiredXP,
+      progressPercentage: progressPercentage.toFixed(1),
+      original_progressPercentage: xpData.progressPercentage
+    });
+    
+    // Update progress text
+    if (progressElement) {
+      const nextLevel = currentLevel + 1;
+      progressElement.textContent = `${progressXP}/${requiredXP} XP to Level ${nextLevel}`;
+    }
+    
+    // Update progress bar with calculated percentage
     if (progressBarElement) {
-      const percentage = xpData.progressPercentage || 0;
-      progressBarElement.style.width = `${Math.min(100, Math.max(0, percentage))}%`;
+      // Use our calculated percentage if the provided one seems incorrect
+      const finalPercentage = (xpData.progressPercentage >= 0 && xpData.progressPercentage <= 100) 
+        ? xpData.progressPercentage 
+        : progressPercentage;
+      
+      console.log('🎮 Setting progress bar to:', finalPercentage.toFixed(1) + '%');
+      progressBarElement.style.width = `${finalPercentage}%`;
+      
+      // Add visual feedback for progress
+      progressBarElement.style.transition = 'width 0.5s ease-out';
+      
+      // Add color coding based on progress
+      if (finalPercentage < 25) {
+        progressBarElement.style.backgroundColor = '#ff6b35'; // Orange-red for low progress
+      } else if (finalPercentage < 50) {
+        progressBarElement.style.backgroundColor = '#ff9500'; // Orange for medium-low
+      } else if (finalPercentage < 75) {
+        progressBarElement.style.backgroundColor = '#3498db'; // Blue for medium-high
+      } else {
+        progressBarElement.style.backgroundColor = '#28a745'; // Green for high progress
+      }
     }
     
   } catch (error) {
     console.error('❌ Error updating XP display:', error);
+    // Fallback display
+    const xpElement = document.getElementById('current-xp');
+    const levelElement = document.getElementById('current-level');
+    const progressElement = document.getElementById('xp-progress');
+    const progressBarElement = document.getElementById('xp-progress-bar');
+    
+    if (xpElement) xpElement.textContent = '0';
+    if (levelElement) levelElement.textContent = '1';
+    if (progressElement) progressElement.textContent = '0/100 XP to Level 2';
+    if (progressBarElement) {
+      progressBarElement.style.width = '0%';
+      progressBarElement.style.backgroundColor = '#e9ecef';
+    }
   }
 }
 

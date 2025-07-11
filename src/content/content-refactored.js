@@ -139,6 +139,22 @@ async function initializeExtension() {
               });
             });
             return true;
+          } else if (request.action === 'resetGamificationData') {
+            console.log('🎓 Reset gamification data requested via content script');
+            // Reset gamification data through the controller's gamification systems
+            if (controller && controller.xpManager) {
+              controller.xpManager.initializeUserProgress().then(() => {
+                console.log('🎮 Gamification data reset successfully');
+                sendResponse({ success: true });
+              }).catch(error => {
+                console.error('🎮 Failed to reset gamification data:', error);
+                sendResponse({ success: false, error: error.message });
+              });
+            } else {
+              console.log('🎮 No gamification systems available for reset');
+              sendResponse({ success: true }); // Still return success since basic stats were reset
+            }
+            return true;
           } else if (request.action === 'resetStats') {
             console.log('🎓 Reset stats requested via content script');
             controller.state.resetStats().then(success => {

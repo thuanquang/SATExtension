@@ -1,0 +1,802 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Gamification Audit</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background: #f8f9fa;
+        }
+        .audit-section {
+            background: white;
+            padding: 20px;
+            margin: 15px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .status-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #6c757d;
+        }
+        .status-card.pass { border-left-color: #28a745; background: #d4edda; }
+        .status-card.fail { border-left-color: #dc3545; background: #f8d7da; }
+        .status-card.warn { border-left-color: #ffc107; background: #fff3cd; }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover { background: #0056b3; }
+        .results {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 15px;
+        }
+        .code-block {
+            background: #f1f3f4;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 10px 0;
+            overflow-x: auto;
+        }
+        h1 { color: #333; margin-bottom: 10px; }
+        h2 { color: #495057; margin-bottom: 15px; }
+        h3 { color: #6c757d; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Comprehensive Gamification Audit</h1>
+    <p>Systematic check of every possible failure point in the gamification implementation.</p>
+
+    <div class="audit-section">
+        <h2>📋 Audit Status</h2>
+        <div id="audit-summary" class="status-card">
+            <strong>Ready to begin comprehensive audit...</strong>
+        </div>
+        <button class="btn" onclick="runFullAudit()">🚀 Run Complete Audit</button>
+        <button class="btn" onclick="runQuickCheck()">⚡ Quick Check</button>
+        <button class="btn" onclick="clearResults()">🗑️ Clear Results</button>
+    </div>
+
+    <div class="audit-section">
+        <h2>🏗️ Architecture Issues</h2>
+        <div class="status-grid" id="architecture-grid">
+            <div class="status-card" id="script-loading">
+                <h3>Script Loading Order</h3>
+                <div id="script-loading-status">Checking...</div>
+            </div>
+            <div class="status-card" id="dependency-init">
+                <h3>Dependency Initialization</h3>
+                <div id="dependency-init-status">Checking...</div>
+            </div>
+            <div class="status-card" id="controller-init">
+                <h3>Controller Initialization</h3>
+                <div id="controller-init-status">Checking...</div>
+            </div>
+            <div class="status-card" id="timing-issues">
+                <h3>Timing Issues</h3>
+                <div id="timing-issues-status">Checking...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="audit-section">
+        <h2>🔧 Parameter & API Issues</h2>
+        <div class="status-grid" id="api-grid">
+            <div class="status-card" id="xp-params">
+                <h3>XP Manager Parameters</h3>
+                <div id="xp-params-status">Checking...</div>
+            </div>
+            <div class="status-card" id="streak-params">
+                <h3>Streak Manager Parameters</h3>
+                <div id="streak-params-status">Checking...</div>
+            </div>
+            <div class="status-card" id="feedback-params">
+                <h3>Feedback Manager Parameters</h3>
+                <div id="feedback-params-status">Checking...</div>
+            </div>
+            <div class="status-card" id="user-id-generation">
+                <h3>User ID Generation</h3>
+                <div id="user-id-generation-status">Checking...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="audit-section">
+        <h2>🗃️ Database & Storage Issues</h2>
+        <div class="status-grid" id="database-grid">
+            <div class="status-card" id="supabase-connection">
+                <h3>Supabase Connection</h3>
+                <div id="supabase-connection-status">Checking...</div>
+            </div>
+            <div class="status-card" id="user-progress-table">
+                <h3>User Progress Table</h3>
+                <div id="user-progress-table-status">Checking...</div>
+            </div>
+            <div class="status-card" id="schema-alignment">
+                <h3>Schema Alignment</h3>
+                <div id="schema-alignment-status">Checking...</div>
+            </div>
+            <div class="status-card" id="rls-policies">
+                <h3>RLS Policies</h3>
+                <div id="rls-policies-status">Checking...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="audit-section">
+        <h2>🎮 Flow & Integration Issues</h2>
+        <div class="status-grid" id="flow-grid">
+            <div class="status-card" id="reward-processing">
+                <h3>Reward Processing</h3>
+                <div id="reward-processing-status">Checking...</div>
+            </div>
+            <div class="status-card" id="message-display">
+                <h3>Message Display</h3>
+                <div id="message-display-status">Checking...</div>
+            </div>
+            <div class="status-card" id="popup-communication">
+                <h3>Popup Communication</h3>
+                <div id="popup-communication-status">Checking...</div>
+            </div>
+            <div class="status-card" id="quiz-integration">
+                <h3>Quiz Integration</h3>
+                <div id="quiz-integration-status">Checking...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="results" id="results">Audit results will appear here...\n</div>
+
+    <script>
+        let auditResults = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = { info: '#00ff00', pass: '#00ff88', fail: '#ff4444', warn: '#ffff00', debug: '#88ccff' };
+            const color = colors[type] || '#00ff00';
+            
+            document.getElementById('results').innerHTML += 
+                `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            document.getElementById('results').scrollTop = document.getElementById('results').scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function setStatus(cardId, status, type = 'warn') {
+            const card = document.getElementById(cardId);
+            const statusDiv = card.querySelector('[id$="-status"]');
+            
+            card.className = `status-card ${type}`;
+            statusDiv.innerHTML = `<strong>${status}</strong>`;
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = 'Audit results cleared...\n';
+            auditResults = [];
+        }
+
+        async function runQuickCheck() {
+            log('⚡ Running quick diagnostic check...', 'info');
+            
+            await checkScriptLoading();
+            await checkControllerInit();
+            await checkXPParameters();
+            await checkDatabaseConnection();
+            
+            log('⚡ Quick check completed', 'info');
+        }
+
+        async function runFullAudit() {
+            log('🚀 Starting comprehensive gamification audit...', 'info');
+            clearResults();
+            
+            // Architecture checks
+            await checkScriptLoading();
+            await checkDependencyInit();
+            await checkControllerInit();
+            await checkTimingIssues();
+            
+            // Parameter & API checks
+            await checkXPParameters();
+            await checkStreakParameters();
+            await checkFeedbackParameters();
+            await checkUserIdGeneration();
+            
+            // Database checks
+            await checkDatabaseConnection();
+            await checkUserProgressTable();
+            await checkSchemaAlignment();
+            await checkRLSPolicies();
+            
+            // Flow & Integration checks
+            await checkRewardProcessing();
+            await checkMessageDisplay();
+            await checkPopupCommunication();
+            await checkQuizIntegration();
+            
+            // Summary
+            const passCount = auditResults.filter(r => r.status === 'pass').length;
+            const failCount = auditResults.filter(r => r.status === 'fail').length;
+            const warnCount = auditResults.filter(r => r.status === 'warn').length;
+            
+            const summary = `Audit Complete: ${passCount} passed, ${failCount} failed, ${warnCount} warnings`;
+            log(`🏁 ${summary}`, failCount > 0 ? 'fail' : 'pass');
+            
+            document.getElementById('audit-summary').innerHTML = `<strong>${summary}</strong>`;
+            document.getElementById('audit-summary').className = `status-card ${failCount > 0 ? 'fail' : 'pass'}`;
+        }
+
+        // Architecture Checks
+        async function checkScriptLoading() {
+            log('📦 Checking script loading order...', 'info');
+            
+            const requiredScripts = [
+                'EXTENSION_CONFIG',
+                'getRandomQuestion',
+                'QuizController',
+                'XPManager',
+                'StreakManager',
+                'BadgeManager',
+                'ChallengeEngine'
+            ];
+            
+            let loaded = 0;
+            const missing = [];
+            
+            requiredScripts.forEach(script => {
+                if (typeof window[script] !== 'undefined') {
+                    loaded++;
+                } else {
+                    missing.push(script);
+                }
+            });
+            
+            if (missing.length === 0) {
+                setStatus('script-loading', 'All scripts loaded correctly', 'pass');
+                auditResults.push({ check: 'script-loading', status: 'pass' });
+                log(`✅ All ${loaded} required scripts loaded`, 'pass');
+            } else {
+                setStatus('script-loading', `Missing: ${missing.join(', ')}`, 'fail');
+                auditResults.push({ check: 'script-loading', status: 'fail' });
+                log(`❌ Missing scripts: ${missing.join(', ')}`, 'fail');
+            }
+        }
+
+        async function checkDependencyInit() {
+            log('🔗 Checking dependency initialization...', 'info');
+            
+            try {
+                // Check if gamification systems can be instantiated
+                const tests = [];
+                
+                if (typeof window.XPManager !== 'undefined') {
+                    const xpManager = new window.XPManager(null);
+                    tests.push('XPManager');
+                }
+                
+                if (typeof window.StreakManager !== 'undefined') {
+                    const streakManager = new window.StreakManager(null);
+                    tests.push('StreakManager');
+                }
+                
+                setStatus('dependency-init', `${tests.length} systems instantiated`, 'pass');
+                auditResults.push({ check: 'dependency-init', status: 'pass' });
+                log(`✅ Successfully instantiated: ${tests.join(', ')}`, 'pass');
+                
+            } catch (error) {
+                setStatus('dependency-init', `Instantiation failed: ${error.message}`, 'fail');
+                auditResults.push({ check: 'dependency-init', status: 'fail' });
+                log(`❌ Dependency instantiation failed: ${error.message}`, 'fail');
+            }
+        }
+
+        async function checkControllerInit() {
+            log('🎮 Checking controller initialization...', 'info');
+            
+            try {
+                // Check if controller exists and has gamification systems
+                const hasController = typeof window.quizController !== 'undefined' || 
+                                    typeof window.QuizController !== 'undefined';
+                
+                if (!hasController) {
+                    setStatus('controller-init', 'No controller found', 'fail');
+                    auditResults.push({ check: 'controller-init', status: 'fail' });
+                    log('❌ No QuizController instance found', 'fail');
+                    return;
+                }
+                
+                const controller = window.quizController || 
+                                (window.QuizController ? window.QuizController.getInstance() : null);
+                
+                if (!controller) {
+                    setStatus('controller-init', 'Controller instance null', 'fail');
+                    auditResults.push({ check: 'controller-init', status: 'fail' });
+                    log('❌ Controller instance is null', 'fail');
+                    return;
+                }
+                
+                // Check gamification systems
+                const systems = {
+                    xpManager: !!controller.xpManager,
+                    streakManager: !!controller.streakManager,
+                    badgeManager: !!controller.badgeManager,
+                    challengeEngine: !!controller.challengeEngine
+                };
+                
+                const loadedSystems = Object.entries(systems).filter(([name, loaded]) => loaded);
+                
+                if (loadedSystems.length >= 2) { // At least XP and Streak should be loaded
+                    setStatus('controller-init', `${loadedSystems.length}/4 systems loaded`, 'pass');
+                    auditResults.push({ check: 'controller-init', status: 'pass' });
+                    log(`✅ Controller has ${loadedSystems.length} gamification systems`, 'pass');
+                } else {
+                    setStatus('controller-init', `Only ${loadedSystems.length}/4 systems loaded`, 'warn');
+                    auditResults.push({ check: 'controller-init', status: 'warn' });
+                    log(`⚠️ Controller only has ${loadedSystems.length} gamification systems`, 'warn');
+                }
+                
+            } catch (error) {
+                setStatus('controller-init', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'controller-init', status: 'fail' });
+                log(`❌ Controller check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        async function checkTimingIssues() {
+            log('⏰ Checking timing issues...', 'info');
+            
+            try {
+                // Check if init() was called
+                const controller = window.quizController || 
+                                (window.QuizController ? window.QuizController.getInstance() : null);
+                
+                if (controller && controller.userId) {
+                    setStatus('timing-issues', 'Controller properly initialized', 'pass');
+                    auditResults.push({ check: 'timing-issues', status: 'pass' });
+                    log(`✅ Controller has userId: ${controller.userId}`, 'pass');
+                } else {
+                    setStatus('timing-issues', 'Controller missing userId', 'warn');
+                    auditResults.push({ check: 'timing-issues', status: 'warn' });
+                    log('⚠️ Controller init() may not have been called', 'warn');
+                }
+                
+            } catch (error) {
+                setStatus('timing-issues', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'timing-issues', status: 'fail' });
+                log(`❌ Timing check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        // Parameter & API Checks
+        async function checkXPParameters() {
+            log('⭐ Checking XP Manager parameters...', 'info');
+            
+            try {
+                if (typeof window.XPManager === 'undefined') {
+                    setStatus('xp-params', 'XPManager not loaded', 'fail');
+                    auditResults.push({ check: 'xp-params', status: 'fail' });
+                    log('❌ XPManager not available', 'fail');
+                    return;
+                }
+                
+                const xpManager = new window.XPManager(null);
+                
+                // Check function signatures
+                const awardXPString = xpManager.awardXP.toString();
+                const correctSignature = awardXPString.includes('xpAmount') && awardXPString.includes('context');
+                
+                if (correctSignature) {
+                    setStatus('xp-params', 'Function signature correct', 'pass');
+                    auditResults.push({ check: 'xp-params', status: 'pass' });
+                    log('✅ XPManager.awardXP has correct signature', 'pass');
+                } else {
+                    setStatus('xp-params', 'Function signature incorrect', 'fail');
+                    auditResults.push({ check: 'xp-params', status: 'fail' });
+                    log('❌ XPManager.awardXP signature is wrong', 'fail');
+                }
+                
+                // Test actual call
+                const testResult = await xpManager.awardXP(10, { source: 'test' });
+                if (testResult.success) {
+                    log('✅ XPManager.awardXP test call successful', 'pass');
+                } else {
+                    log(`⚠️ XPManager.awardXP test failed: ${testResult.error}`, 'warn');
+                }
+                
+            } catch (error) {
+                setStatus('xp-params', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'xp-params', status: 'fail' });
+                log(`❌ XP parameter check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        async function checkStreakParameters() {
+            log('🔥 Checking Streak Manager parameters...', 'info');
+            
+            try {
+                if (typeof window.StreakManager === 'undefined') {
+                    setStatus('streak-params', 'StreakManager not loaded', 'fail');
+                    auditResults.push({ check: 'streak-params', status: 'fail' });
+                    log('❌ StreakManager not available', 'fail');
+                    return;
+                }
+                
+                const streakManager = new window.StreakManager(null);
+                
+                // Test streak update
+                const testResult = await streakManager.updateStreak(true, 'medium');
+                if (testResult.success) {
+                    setStatus('streak-params', 'Parameters working correctly', 'pass');
+                    auditResults.push({ check: 'streak-params', status: 'pass' });
+                    log('✅ StreakManager.updateStreak test successful', 'pass');
+                } else {
+                    setStatus('streak-params', `Test failed: ${testResult.error}`, 'warn');
+                    auditResults.push({ check: 'streak-params', status: 'warn' });
+                    log(`⚠️ StreakManager test failed: ${testResult.error}`, 'warn');
+                }
+                
+            } catch (error) {
+                setStatus('streak-params', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'streak-params', status: 'fail' });
+                log(`❌ Streak parameter check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        async function checkFeedbackParameters() {
+            log('💬 Checking Feedback Manager parameters...', 'info');
+            
+            try {
+                if (typeof window.FeedbackManager === 'undefined') {
+                    setStatus('feedback-params', 'FeedbackManager not loaded', 'fail');
+                    auditResults.push({ check: 'feedback-params', status: 'fail' });
+                    log('❌ FeedbackManager not available', 'fail');
+                    return;
+                }
+                
+                // Check showMessage signature
+                const feedbackManager = new window.FeedbackManager();
+                const showMessageString = feedbackManager.showMessage.toString();
+                
+                // Check if third parameter (duration) is supported
+                const supportsDuration = showMessageString.includes('duration') || showMessageString.split(',').length > 2;
+                
+                if (supportsDuration) {
+                    setStatus('feedback-params', 'Duration parameter supported', 'pass');
+                    auditResults.push({ check: 'feedback-params', status: 'pass' });
+                    log('✅ FeedbackManager supports duration parameter', 'pass');
+                } else {
+                    setStatus('feedback-params', 'Duration parameter NOT supported', 'warn');
+                    auditResults.push({ check: 'feedback-params', status: 'warn' });
+                    log('⚠️ FeedbackManager showMessage only takes (message, type) - duration ignored', 'warn');
+                    log('🔧 This means additional achievement messages may not display properly', 'warn');
+                }
+                
+            } catch (error) {
+                setStatus('feedback-params', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'feedback-params', status: 'fail' });
+                log(`❌ Feedback parameter check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        async function checkUserIdGeneration() {
+            log('👤 Checking user ID generation...', 'info');
+            
+            try {
+                if (typeof window.getCurrentUserId === 'undefined') {
+                    setStatus('user-id-generation', 'getCurrentUserId not available', 'fail');
+                    auditResults.push({ check: 'user-id-generation', status: 'fail' });
+                    log('❌ getCurrentUserId function not found', 'fail');
+                    return;
+                }
+                
+                const userId1 = await window.getCurrentUserId();
+                const userId2 = await window.getCurrentUserId();
+                
+                if (userId1 && userId1 === userId2) {
+                    setStatus('user-id-generation', 'User ID generation working', 'pass');
+                    auditResults.push({ check: 'user-id-generation', status: 'pass' });
+                    log(`✅ User ID generation working: ${userId1}`, 'pass');
+                } else {
+                    setStatus('user-id-generation', 'Inconsistent user IDs', 'warn');
+                    auditResults.push({ check: 'user-id-generation', status: 'warn' });
+                    log(`⚠️ User IDs inconsistent: ${userId1} vs ${userId2}`, 'warn');
+                }
+                
+            } catch (error) {
+                setStatus('user-id-generation', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'user-id-generation', status: 'fail' });
+                log(`❌ User ID generation check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        // Database Checks
+        async function checkDatabaseConnection() {
+            log('🗃️ Checking database connection...', 'info');
+            
+            try {
+                if (typeof window.supabaseQuery === 'undefined') {
+                    setStatus('supabase-connection', 'supabaseQuery not available', 'fail');
+                    auditResults.push({ check: 'supabase-connection', status: 'fail' });
+                    log('❌ supabaseQuery function not found', 'fail');
+                    return;
+                }
+                
+                // Test basic query
+                const { data, error } = await window.supabaseQuery('questions', 'select', null, { limit: 1 });
+                
+                if (error) {
+                    setStatus('supabase-connection', `Query failed: ${error}`, 'fail');
+                    auditResults.push({ check: 'supabase-connection', status: 'fail' });
+                    log(`❌ Database query failed: ${error}`, 'fail');
+                } else {
+                    setStatus('supabase-connection', 'Database connection working', 'pass');
+                    auditResults.push({ check: 'supabase-connection', status: 'pass' });
+                    log('✅ Database connection successful', 'pass');
+                }
+                
+            } catch (error) {
+                setStatus('supabase-connection', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'supabase-connection', status: 'fail' });
+                log(`❌ Database connection check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        async function checkUserProgressTable() {
+            log('📊 Checking user_progress table...', 'info');
+            
+            try {
+                const userId = await window.getCurrentUserId();
+                const { data, error } = await window.supabaseQuery('user_progress', 'select', null, { user_id: userId });
+                
+                if (error) {
+                    setStatus('user-progress-table', `Table access failed: ${error}`, 'fail');
+                    auditResults.push({ check: 'user-progress-table', status: 'fail' });
+                    log(`❌ user_progress table access failed: ${error}`, 'fail');
+                } else {
+                    setStatus('user-progress-table', 'Table accessible', 'pass');
+                    auditResults.push({ check: 'user-progress-table', status: 'pass' });
+                    log('✅ user_progress table accessible', 'pass');
+                    
+                    if (data && data.length > 0) {
+                        log(`📊 Found user progress record: ${JSON.stringify(data[0])}`, 'debug');
+                    } else {
+                        log('📊 No user progress record found (will be created on first XP award)', 'info');
+                    }
+                }
+                
+            } catch (error) {
+                setStatus('user-progress-table', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'user-progress-table', status: 'fail' });
+                log(`❌ user_progress table check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        async function checkSchemaAlignment() {
+            log('🏗️ Checking schema alignment...', 'info');
+            
+            try {
+                // Test critical column names
+                const userId = await window.getCurrentUserId();
+                const testData = {
+                    user_id: userId,
+                    total_xp: 0,
+                    current_level: 1,
+                    questions_answered: 0,
+                    questions_correct: 0,
+                    current_streak: 0,
+                    longest_streak: 0,
+                    last_quiz_time: new Date().toISOString()
+                };
+                
+                const { data, error } = await window.supabaseQuery('user_progress', 'upsert', testData);
+                
+                if (error) {
+                    setStatus('schema-alignment', `Schema mismatch: ${error}`, 'fail');
+                    auditResults.push({ check: 'schema-alignment', status: 'fail' });
+                    log(`❌ Schema alignment failed: ${error}`, 'fail');
+                } else {
+                    setStatus('schema-alignment', 'Schema aligned correctly', 'pass');
+                    auditResults.push({ check: 'schema-alignment', status: 'pass' });
+                    log('✅ Database schema aligned with code expectations', 'pass');
+                }
+                
+            } catch (error) {
+                setStatus('schema-alignment', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'schema-alignment', status: 'fail' });
+                log(`❌ Schema alignment check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        async function checkRLSPolicies() {
+            log('🔒 Checking RLS policies...', 'info');
+            
+            // For now, just check if queries work - RLS issues would prevent database access
+            const databaseWorking = auditResults.find(r => r.check === 'supabase-connection')?.status === 'pass';
+            
+            if (databaseWorking) {
+                setStatus('rls-policies', 'Policies allow access', 'pass');
+                auditResults.push({ check: 'rls-policies', status: 'pass' });
+                log('✅ RLS policies allow access (database queries working)', 'pass');
+            } else {
+                setStatus('rls-policies', 'Cannot determine (DB issues)', 'warn');
+                auditResults.push({ check: 'rls-policies', status: 'warn' });
+                log('⚠️ Cannot check RLS policies (database connection issues)', 'warn');
+            }
+        }
+
+        // Flow & Integration Checks
+        async function checkRewardProcessing() {
+            log('🎁 Checking reward processing flow...', 'info');
+            
+            try {
+                const controller = window.quizController || 
+                                (window.QuizController ? window.QuizController.getInstance() : null);
+                
+                if (!controller) {
+                    setStatus('reward-processing', 'No controller available', 'fail');
+                    auditResults.push({ check: 'reward-processing', status: 'fail' });
+                    log('❌ No controller available for reward processing', 'fail');
+                    return;
+                }
+                
+                // Check if gamification systems are available
+                const hasXP = !!controller.xpManager;
+                const hasStreak = !!controller.streakManager;
+                
+                if (hasXP && hasStreak) {
+                    setStatus('reward-processing', 'Core systems available', 'pass');
+                    auditResults.push({ check: 'reward-processing', status: 'pass' });
+                    log('✅ Core reward processing systems available', 'pass');
+                } else {
+                    setStatus('reward-processing', 'Missing core systems', 'fail');
+                    auditResults.push({ check: 'reward-processing', status: 'fail' });
+                    log(`❌ Missing systems - XP: ${hasXP}, Streak: ${hasStreak}`, 'fail');
+                }
+                
+            } catch (error) {
+                setStatus('reward-processing', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'reward-processing', status: 'fail' });
+                log(`❌ Reward processing check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        async function checkMessageDisplay() {
+            log('💬 Checking message display...', 'info');
+            
+            try {
+                // Check if FeedbackManager can display messages
+                if (typeof window.FeedbackManager === 'undefined') {
+                    setStatus('message-display', 'FeedbackManager not available', 'fail');
+                    auditResults.push({ check: 'message-display', status: 'fail' });
+                    log('❌ FeedbackManager not available', 'fail');
+                    return;
+                }
+                
+                // Test message display capability
+                const feedbackManager = new window.FeedbackManager();
+                const hasShowMessage = typeof feedbackManager.showMessage === 'function';
+                
+                if (hasShowMessage) {
+                    setStatus('message-display', 'Message display available', 'pass');
+                    auditResults.push({ check: 'message-display', status: 'pass' });
+                    log('✅ FeedbackManager can display messages', 'pass');
+                } else {
+                    setStatus('message-display', 'showMessage method missing', 'fail');
+                    auditResults.push({ check: 'message-display', status: 'fail' });
+                    log('❌ FeedbackManager missing showMessage method', 'fail');
+                }
+                
+            } catch (error) {
+                setStatus('message-display', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'message-display', status: 'fail' });
+                log(`❌ Message display check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        async function checkPopupCommunication() {
+            log('📡 Checking popup communication...', 'info');
+            
+            try {
+                const controller = window.quizController || 
+                                (window.QuizController ? window.QuizController.getInstance() : null);
+                
+                if (!controller) {
+                    setStatus('popup-communication', 'No controller for communication', 'warn');
+                    auditResults.push({ check: 'popup-communication', status: 'warn' });
+                    log('⚠️ No controller available for popup communication', 'warn');
+                    return;
+                }
+                
+                // Test gamification summary
+                const hasGamificationSummary = typeof controller.getGamificationSummary === 'function';
+                
+                if (hasGamificationSummary) {
+                    const summary = await controller.getGamificationSummary();
+                    if (summary.success) {
+                        setStatus('popup-communication', 'Communication working', 'pass');
+                        auditResults.push({ check: 'popup-communication', status: 'pass' });
+                        log('✅ Popup communication working', 'pass');
+                    } else {
+                        setStatus('popup-communication', `Summary failed: ${summary.error}`, 'warn');
+                        auditResults.push({ check: 'popup-communication', status: 'warn' });
+                        log(`⚠️ Gamification summary failed: ${summary.error}`, 'warn');
+                    }
+                } else {
+                    setStatus('popup-communication', 'getGamificationSummary missing', 'fail');
+                    auditResults.push({ check: 'popup-communication', status: 'fail' });
+                    log('❌ Controller missing getGamificationSummary method', 'fail');
+                }
+                
+            } catch (error) {
+                setStatus('popup-communication', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'popup-communication', status: 'fail' });
+                log(`❌ Popup communication check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        async function checkQuizIntegration() {
+            log('🎯 Checking quiz integration...', 'info');
+            
+            try {
+                const controller = window.quizController || 
+                                (window.QuizController ? window.QuizController.getInstance() : null);
+                
+                if (!controller) {
+                    setStatus('quiz-integration', 'No controller available', 'fail');
+                    auditResults.push({ check: 'quiz-integration', status: 'fail' });
+                    log('❌ No controller available for quiz integration', 'fail');
+                    return;
+                }
+                
+                // Check critical methods
+                const hasProcessRewards = typeof controller._processCorrectAnswerRewards === 'function';
+                const hasShowMessage = typeof controller._showEnhancedSuccessMessage === 'function';
+                
+                if (hasProcessRewards && hasShowMessage) {
+                    setStatus('quiz-integration', 'Integration methods available', 'pass');
+                    auditResults.push({ check: 'quiz-integration', status: 'pass' });
+                    log('✅ Quiz-gamification integration methods available', 'pass');
+                } else {
+                    setStatus('quiz-integration', 'Missing integration methods', 'fail');
+                    auditResults.push({ check: 'quiz-integration', status: 'fail' });
+                    log(`❌ Missing methods - ProcessRewards: ${hasProcessRewards}, ShowMessage: ${hasShowMessage}`, 'fail');
+                }
+                
+            } catch (error) {
+                setStatus('quiz-integration', `Error: ${error.message}`, 'fail');
+                auditResults.push({ check: 'quiz-integration', status: 'fail' });
+                log(`❌ Quiz integration check failed: ${error.message}`, 'fail');
+            }
+        }
+
+        // Auto-run quick check on load
+        window.addEventListener('load', () => {
+            setTimeout(runQuickCheck, 1000);
+        });
+    </script>
+</body>
+</html> 

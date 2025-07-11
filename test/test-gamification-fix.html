@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamification Fix Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 40px;
+            background: #f8f9fa;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover { background: #0056b3; }
+        .btn.success { background: #28a745; }
+        .btn.error { background: #dc3545; }
+        .results {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin-top: 10px;
+        }
+        .status-card {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .status-card.success { background: #d4edda; color: #155724; }
+        .status-card.error { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+    <h1>🎮 Gamification Parameter Fix Test</h1>
+    <p>Testing the fix for XPManager.awardXP() parameter mismatch that was preventing gamification from working.</p>
+
+    <div class="test-section">
+        <h2>🔍 Issue Diagnosis</h2>
+        <div id="diagnosis-status" class="status-card">
+            <strong>Checking parameter mismatch fix...</strong>
+        </div>
+        <button class="btn" onclick="diagnoseProblem()">🔍 Diagnose Issue</button>
+        <button class="btn" onclick="testParameterFix()">🔧 Test Parameter Fix</button>
+    </div>
+
+    <div class="test-section">
+        <h2>⭐ XP System Test</h2>
+        <div id="xp-status" class="status-card">Ready to test XP system...</div>
+        <button class="btn" onclick="testXPSystem()">⭐ Test XP Award</button>
+        <button class="btn" onclick="testXPCalculation()">🧮 Test XP Calculation</button>
+        <button class="btn" onclick="getXPSummary()">📊 Get XP Summary</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🔥 Streak System Test</h2>
+        <div id="streak-status" class="status-card">Ready to test streak system...</div>
+        <button class="btn" onclick="testStreakSystem()">🔥 Test Streak Update</button>
+        <button class="btn" onclick="getStreakSummary()">📈 Get Streak Summary</button>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Full Gamification Flow</h2>
+        <div id="flow-status" class="status-card">Ready to test complete flow...</div>
+        <button class="btn" onclick="simulateQuizCompletion()">🎯 Simulate Quiz Completion</button>
+        <button class="btn" onclick="forceQuizTest()">⚡ Force Real Quiz</button>
+    </div>
+
+    <div class="results" id="results">Test results will appear here...\n</div>
+
+    <script>
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const colors = { info: '#00ff00', success: '#00ff88', error: '#ff4444', warning: '#ffff00' };
+            const color = colors[type] || '#00ff00';
+            
+            document.getElementById('results').innerHTML += 
+                `<span style="color: ${color}">[${timestamp}] ${message}</span>\n`;
+            document.getElementById('results').scrollTop = document.getElementById('results').scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+
+        function setStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.className = `status-card ${type}`;
+            element.innerHTML = `<strong>${message}</strong>`;
+        }
+
+        window.addEventListener('load', () => {
+            setTimeout(diagnoseProblem, 1000);
+        });
+
+        async function diagnoseProblem() {
+            log('🔍 Diagnosing gamification parameter issue...', 'info');
+            
+            try {
+                // Check if XPManager is available
+                if (typeof window.XPManager === 'undefined') {
+                    log('❌ XPManager not loaded', 'error');
+                    setStatus('diagnosis-status', 'XPManager not available', 'error');
+                    return;
+                }
+
+                // Create XPManager instance
+                const xpManager = new window.XPManager(null);
+                log('✅ XPManager instance created', 'success');
+
+                // Check awardXP function signature
+                const awardXPString = xpManager.awardXP.toString();
+                if (awardXPString.includes('xpAmount, context')) {
+                    log('✅ XPManager.awardXP has correct signature: (xpAmount, context)', 'success');
+                    setStatus('diagnosis-status', 'Parameter fix confirmed - XPManager expects (xpAmount, context)', 'success');
+                } else {
+                    log('⚠️ XPManager.awardXP signature may be different than expected', 'warning');
+                    log(`Function signature: ${awardXPString.substring(0, 100)}...`, 'info');
+                }
+
+                // Check if QuizController exists
+                if (typeof window.QuizController !== 'undefined') {
+                    log('✅ QuizController available', 'success');
+                } else if (typeof window.quizController !== 'undefined') {
+                    log('✅ Global quizController instance available', 'success');
+                } else {
+                    log('⚠️ QuizController not found', 'warning');
+                }
+
+            } catch (error) {
+                log(`❌ Error diagnosing issue: ${error.message}`, 'error');
+                setStatus('diagnosis-status', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testParameterFix() {
+            log('🔧 Testing parameter fix...', 'info');
+            
+            try {
+                if (typeof window.XPManager === 'undefined') {
+                    log('❌ XPManager not available', 'error');
+                    return;
+                }
+
+                const xpManager = new window.XPManager(null);
+                
+                // Test with CORRECT parameters (xpAmount first)
+                log('Testing with correct parameters: awardXP(15, context)', 'info');
+                const correctResult = await xpManager.awardXP(15, {
+                    source: 'test',
+                    difficulty: 'medium'
+                });
+
+                if (correctResult.success) {
+                    log(`✅ Correct call succeeded: +${correctResult.xpGained} XP`, 'success');
+                    setStatus('diagnosis-status', 'Parameter fix working correctly!', 'success');
+                } else {
+                    log(`❌ Correct call failed: ${correctResult.error}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Parameter fix test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testXPSystem() {
+            log('⭐ Testing XP system...', 'info');
+            
+            try {
+                if (typeof window.XPManager === 'undefined') {
+                    log('❌ XPManager not available', 'error');
+                    setStatus('xp-status', 'XPManager not available', 'error');
+                    return;
+                }
+
+                const xpManager = new window.XPManager(null);
+                
+                // Test XP calculation
+                const xpAmount = xpManager.calculateQuestionXP('medium', 1, 25000, 2);
+                log(`🧮 Calculated XP: ${xpAmount} for medium question (1 attempt, 25s, 2 streak)`, 'success');
+
+                // Test XP awarding with FIXED parameters
+                const awardResult = await xpManager.awardXP(xpAmount, {
+                    source: 'test_completion',
+                    difficulty: 'medium',
+                    attempts: 1,
+                    timeToAnswer: 25000
+                });
+
+                if (awardResult.success) {
+                    log(`✅ XP awarded successfully: +${awardResult.xpGained} XP`, 'success');
+                    log(`📊 New total XP: ${awardResult.newTotalXP}`, 'info');
+                    log(`🏆 Current level: ${awardResult.newLevel}`, 'info');
+                    
+                    if (awardResult.leveledUp) {
+                        log(`🎉 LEVEL UP! From ${awardResult.previousLevel} to ${awardResult.newLevel}`, 'success');
+                    }
+                    
+                    setStatus('xp-status', `XP System Working! Awarded +${awardResult.xpGained} XP`, 'success');
+                } else {
+                    log(`❌ XP award failed: ${awardResult.error}`, 'error');
+                    setStatus('xp-status', `XP award failed: ${awardResult.error}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ XP system test failed: ${error.message}`, 'error');
+                setStatus('xp-status', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testXPCalculation() {
+            log('🧮 Testing XP calculation...', 'info');
+            
+            try {
+                if (typeof window.XPManager === 'undefined') {
+                    log('❌ XPManager not available', 'error');
+                    return;
+                }
+
+                const xpManager = new window.XPManager(null);
+                
+                // Test different scenarios
+                const scenarios = [
+                    { difficulty: 'easy', attempts: 1, time: 15000, streak: 0 },
+                    { difficulty: 'medium', attempts: 1, time: 30000, streak: 3 },
+                    { difficulty: 'hard', attempts: 2, time: 60000, streak: 5 },
+                ];
+
+                scenarios.forEach(scenario => {
+                    const xp = xpManager.calculateQuestionXP(
+                        scenario.difficulty, 
+                        scenario.attempts, 
+                        scenario.time, 
+                        scenario.streak
+                    );
+                    log(`📊 ${scenario.difficulty} (${scenario.attempts} attempts, ${scenario.time/1000}s, ${scenario.streak} streak): ${xp} XP`, 'info');
+                });
+
+            } catch (error) {
+                log(`❌ XP calculation test failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function getXPSummary() {
+            log('📊 Getting XP summary...', 'info');
+            
+            try {
+                if (typeof window.XPManager === 'undefined') {
+                    log('❌ XPManager not available', 'error');
+                    return;
+                }
+
+                const xpManager = new window.XPManager(null);
+                const summary = await xpManager.getXPSummary();
+
+                if (summary.success) {
+                    log('✅ XP Summary retrieved:', 'success');
+                    log(`📊 Total XP: ${summary.totalXP}`, 'info');
+                    log(`🏆 Current Level: ${summary.currentLevel}`, 'info');
+                    log(`📈 Progress: ${summary.progressXP}/${summary.requiredXP} (${Math.round(summary.progressPercentage)}%)`, 'info');
+                    log(`🔥 Streak Multiplier: ${summary.streakMultiplier}x`, 'info');
+                } else {
+                    log(`❌ Failed to get XP summary: ${summary.error}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ XP summary failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function testStreakSystem() {
+            log('🔥 Testing streak system...', 'info');
+            
+            try {
+                if (typeof window.StreakManager === 'undefined') {
+                    log('❌ StreakManager not available', 'error');
+                    setStatus('streak-status', 'StreakManager not available', 'error');
+                    return;
+                }
+
+                const streakManager = new window.StreakManager(null);
+                
+                // Test streak update for correct answer
+                const streakResult = await streakManager.updateStreak(true, 'medium');
+
+                if (streakResult.success) {
+                    log(`✅ Streak updated successfully: ${streakResult.currentStreak}`, 'success');
+                    setStatus('streak-status', `Streak System Working! Current: ${streakResult.currentStreak}`, 'success');
+                    
+                    if (streakResult.streakReward) {
+                        log(`🎁 Streak reward: ${streakResult.streakReward.message}`, 'success');
+                    }
+                } else {
+                    log(`❌ Streak update failed: ${streakResult.error}`, 'error');
+                    setStatus('streak-status', `Streak update failed: ${streakResult.error}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Streak system test failed: ${error.message}`, 'error');
+                setStatus('streak-status', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getStreakSummary() {
+            log('📈 Getting streak summary...', 'info');
+            
+            try {
+                if (typeof window.StreakManager === 'undefined') {
+                    log('❌ StreakManager not available', 'error');
+                    return;
+                }
+
+                const streakManager = new window.StreakManager(null);
+                const summary = await streakManager.getStreakSummary();
+
+                if (summary.success) {
+                    log('✅ Streak Summary retrieved:', 'success');
+                    log(`🔥 Current Streak: ${summary.summary.currentStreak}`, 'info');
+                    log(`🏆 Longest Streak: ${summary.summary.longestStreak}`, 'info');
+                    log(`📅 Daily Streak: ${summary.summary.dailyStreak}`, 'info');
+                } else {
+                    log(`❌ Failed to get streak summary: ${summary.error}`, 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Streak summary failed: ${error.message}`, 'error');
+            }
+        }
+
+        async function simulateQuizCompletion() {
+            log('🎯 Simulating complete quiz completion flow...', 'info');
+            
+            try {
+                // This simulates what happens when a user answers correctly
+                const mockQuestion = {
+                    question_id: 'test_' + Date.now(),
+                    difficulty: 'medium',
+                    tag: 'algebra'
+                };
+
+                const attempts = 1;
+                const timeToAnswer = 25000;
+
+                // Test the exact flow from QuizController
+                if (typeof window.XPManager !== 'undefined' && typeof window.StreakManager !== 'undefined') {
+                    const xpManager = new window.XPManager(null);
+                    const streakManager = new window.StreakManager(null);
+
+                    // Update streak first (as in QuizController)
+                    const streakResult = await streakManager.updateStreak(true, mockQuestion.difficulty);
+                    log(`🔥 Streak updated: ${streakResult.currentStreak}`, 'success');
+
+                    // Calculate and award XP (with FIXED parameters)
+                    const currentStreak = streakResult.currentStreak || 0;
+                    const xpAmount = xpManager.calculateQuestionXP(
+                        mockQuestion.difficulty, 
+                        attempts, 
+                        timeToAnswer, 
+                        currentStreak
+                    );
+
+                    const xpResult = await xpManager.awardXP(xpAmount, {
+                        source: 'question_completion',
+                        difficulty: mockQuestion.difficulty,
+                        attempts: attempts,
+                        timeToAnswer: timeToAnswer,
+                        questionId: mockQuestion.question_id
+                    });
+
+                    if (xpResult.success) {
+                        log(`⭐ XP awarded: +${xpResult.xpGained} XP`, 'success');
+                        
+                        // Show success message like QuizController would
+                        let message = '✅ Correct! Well done!';
+                        message += ` (+${xpResult.xpGained} XP)`;
+                        
+                        if (streakResult.currentStreak > 1) {
+                            message += ` 🔥 ${streakResult.currentStreak} streak!`;
+                        }
+                        
+                        log(`🎉 SUCCESS MESSAGE: ${message}`, 'success');
+                        setStatus('flow-status', 'Complete gamification flow working!', 'success');
+                    } else {
+                        log(`❌ XP award failed: ${xpResult.error}`, 'error');
+                        setStatus('flow-status', `Flow failed: ${xpResult.error}`, 'error');
+                    }
+                } else {
+                    log('❌ Required gamification systems not available', 'error');
+                    setStatus('flow-status', 'Gamification systems not available', 'error');
+                }
+
+            } catch (error) {
+                log(`❌ Simulation failed: ${error.message}`, 'error');
+                setStatus('flow-status', `Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function forceQuizTest() {
+            log('⚡ Attempting to force real quiz...', 'info');
+            
+            try {
+                if (typeof window.debugQuiz !== 'undefined') {
+                    await window.debugQuiz.forceQuiz();
+                    log('✅ Real quiz forced via debug interface', 'success');
+                } else if (typeof window.quizController !== 'undefined') {
+                    await window.quizController.forceQuiz();
+                    log('✅ Real quiz forced via controller', 'success');
+                } else {
+                    log('⚠️ No method available to force quiz', 'warning');
+                }
+
+            } catch (error) {
+                log(`❌ Force quiz failed: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html> 

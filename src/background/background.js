@@ -33,11 +33,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
   
   if (request.action === 'resetStats') {
+    // Reset both Chrome storage and send reset message to content script
     chrome.storage.local.set({
       questionsAnswered: 0,
       totalAttempts: 0,
       lastQuizTime: null
-    }, () => {
+    }, async () => {
+      // Also try to reset gamification data
+      try {
+        chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+          if (tabs[0]) {
+            try {
+              await chrome.tabs.sendMessage(tabs[0].id, { action: 'resetGamificationData' });
+            } catch (error) {
+              console.log('Content script not available for gamification reset');
+            }
+          }
+        });
+      } catch (error) {
+        console.log('Could not reset gamification data');
+      }
+      
       sendResponse({ success: true });
     });
     return true;
@@ -71,20 +87,52 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
       if (tabs[0]) {
         try {
+          console.log(`🎓 Forwarding ${request.action} to content script...`);
           const response = await chrome.tabs.sendMessage(tabs[0].id, request);
+          console.log(`🎓 Content script response for ${request.action}:`, response);
           sendResponse(response);
         } catch (error) {
           console.error(`Failed to send ${request.action} to content script:`, error);
           
           if (request.action === 'getGamificationStats') {
-            // Return default gamification stats if content script not available
+            // Return realistic default gamification stats if content script not available
+            console.log('🎓 Returning default gamification stats');
             sendResponse({ 
               success: true,
-              xp: { current: 0, level: 1, nextLevelXP: 100, progressPercentage: 0 },
-              streaks: { current: 0, longest: 0, daily: 0, level: 'none' },
-              badges: { earned: 0, total: 0, recent: [] },
-              challenges: { hasChallenge: false, progress: 0 },
-              customization: { currentTheme: 'Default', availableThemes: 0 }
+              xp: { 
+                current: 0, 
+                level: 1, 
+                nextLevelXP: 100, 
+                progressPercentage: 0,
+                streakMultiplier: 1.0
+              },
+              streaks: { 
+                current: 0, 
+                longest: 0, 
+                daily: 0, 
+                level: 'none',
+                isOnFire: false,
+                nextMilestone: 3
+              },
+              badges: { 
+                earned: 0, 
+                total: 30, 
+                recent: [],
+                rarityBreakdown: { bronze: 0, silver: 0, gold: 0, platinum: 0 }
+              },
+              challenges: { 
+                hasChallenge: false, 
+                progress: 0,
+                title: 'No active challenge',
+                description: 'Complete a quiz to unlock daily challenges'
+              },
+              customization: { 
+                currentTheme: 'Classic Scholar', 
+                availableThemes: 1,
+                currentLayout: 'Standard Modal',
+                availableLayouts: 1,
+                customizationLevel: 1
+              }
             });
           } else {
             sendResponse({ 

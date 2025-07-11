@@ -473,7 +473,7 @@ class QuizController {
           currentStreak
         );
         
-        const xpResult = await this.xpManager.awardXP(this.userId, xpAmount, {
+        const xpResult = await this.xpManager.awardXP(xpAmount, {
           source: 'question_completion',
           difficulty: question.difficulty,
           attempts: attempts,
@@ -574,7 +574,7 @@ class QuizController {
     // Show additional messages with delay
     additionalMessages.forEach((msg, index) => {
       setTimeout(() => {
-        this.feedback.showMessage(msg, 'achievement', 3000);
+        this.feedback.showMessage(msg, 'success');
       }, (index + 1) * 1500);
     });
   }
