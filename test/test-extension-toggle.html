@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extension Toggle Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            border: 2px solid #ddd;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .test-section h2 {
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .test-button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .test-button:hover {
+            background: #0056b3;
+        }
+        .test-button.danger {
+            background: #dc3545;
+        }
+        .test-button.danger:hover {
+            background: #c82333;
+        }
+        .test-button.success {
+            background: #28a745;
+        }
+        .test-button.success:hover {
+            background: #218838;
+        }
+        .test-result {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        .error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+        .warning {
+            border-color: #ffc107;
+            background: #fff3cd;
+        }
+        .info-box {
+            background: #e7f3ff;
+            border: 1px solid #bee5eb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-active {
+            background: #28a745;
+        }
+        .status-inactive {
+            background: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎓 Extension Toggle Test</h1>
+    
+    <div class="info-box">
+        <h3>Test Purpose:</h3>
+        <p>This test verifies that the extension properly responds to enable/disable toggles:</p>
+        <ul>
+            <li>Extension should stop running when disabled</li>
+            <li>Extension should resume when re-enabled</li>
+            <li>Force quiz should be blocked when disabled</li>
+            <li>Active quizzes should be stopped when disabled</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 Extension State Management</h2>
+        <button class="test-button" onclick="checkExtensionState()">Check Current State</button>
+        <button class="test-button danger" onclick="disableExtension()">Disable Extension</button>
+        <button class="test-button success" onclick="enableExtension()">Enable Extension</button>
+        <button class="test-button" onclick="toggleExtension()">Toggle Extension</button>
+        <div id="state-result" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🎯 Force Quiz Test</h2>
+        <button class="test-button" onclick="testForceQuiz()">Test Force Quiz</button>
+        <button class="test-button" onclick="testForceQuizDisabled()">Test Force Quiz (Disabled)</button>
+        <div id="force-quiz-result" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Extension Status</h2>
+        <div id="extension-status">
+            <span class="status-indicator status-inactive"></span>
+            <span>Extension Status: Unknown</span>
+        </div>
+        <button class="test-button" onclick="refreshStatus()">Refresh Status</button>
+        <div id="status-result" class="test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 Integration Test</h2>
+        <button class="test-button" onclick="runIntegrationTest()">Run Full Integration Test</button>
+        <div id="integration-result" class="test-result"></div>
+    </div>
+
+    <script>
+        let currentExtensionState = null;
+
+        // Check current extension state
+        async function checkExtensionState() {
+            const resultDiv = document.getElementById('state-result');
+            try {
+                resultDiv.textContent = 'Checking extension state...\n';
+
+                if (typeof chrome === 'undefined' || !chrome.storage) {
+                    throw new Error('Chrome extension API not available');
+                }
+
+                const result = await new Promise((resolve) => {
+                    chrome.storage.local.get(['extensionEnabled'], (result) => {
+                        resolve(result);
+                    });
+                });
+
+                const isEnabled = result.extensionEnabled !== false;
+                currentExtensionState = isEnabled;
+
+                const status = {
+                    extensionEnabled: isEnabled,
+                    rawValue: result.extensionEnabled,
+                    timestamp: new Date().toISOString()
+                };
+
+                resultDiv.textContent = 'Extension State:\n' + JSON.stringify(status, null, 2);
+                resultDiv.className = 'test-result success';
+                updateStatusIndicator(isEnabled);
+
+            } catch (error) {
+                resultDiv.textContent = `Error checking extension state: ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Disable extension
+        async function disableExtension() {
+            const resultDiv = document.getElementById('state-result');
+            try {
+                resultDiv.textContent = 'Disabling extension...\n';
+
+                if (typeof chrome === 'undefined' || !chrome.runtime) {
+                    throw new Error('Chrome extension API not available');
+                }
+
+                const response = await chrome.runtime.sendMessage({ 
+                    action: 'toggleExtension', 
+                    enabled: false 
+                });
+
+                const status = {
+                    action: 'disable',
+                    response: response,
+                    timestamp: new Date().toISOString()
+                };
+
+                resultDiv.textContent = 'Extension Disabled:\n' + JSON.stringify(status, null, 2);
+                resultDiv.className = 'test-result success';
+                updateStatusIndicator(false);
+
+                // Wait a moment then check state
+                setTimeout(checkExtensionState, 1000);
+
+            } catch (error) {
+                resultDiv.textContent = `Error disabling extension: ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Enable extension
+        async function enableExtension() {
+            const resultDiv = document.getElementById('state-result');
+            try {
+                resultDiv.textContent = 'Enabling extension...\n';
+
+                if (typeof chrome === 'undefined' || !chrome.runtime) {
+                    throw new Error('Chrome extension API not available');
+                }
+
+                const response = await chrome.runtime.sendMessage({ 
+                    action: 'toggleExtension', 
+                    enabled: true 
+                });
+
+                const status = {
+                    action: 'enable',
+                    response: response,
+                    timestamp: new Date().toISOString()
+                };
+
+                resultDiv.textContent = 'Extension Enabled:\n' + JSON.stringify(status, null, 2);
+                resultDiv.className = 'test-result success';
+                updateStatusIndicator(true);
+
+                // Wait a moment then check state
+                setTimeout(checkExtensionState, 1000);
+
+            } catch (error) {
+                resultDiv.textContent = `Error enabling extension: ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Toggle extension
+        async function toggleExtension() {
+            const resultDiv = document.getElementById('state-result');
+            try {
+                resultDiv.textContent = 'Toggling extension...\n';
+
+                if (typeof chrome === 'undefined' || !chrome.runtime) {
+                    throw new Error('Chrome extension API not available');
+                }
+
+                const response = await chrome.runtime.sendMessage({ 
+                    action: 'toggleExtension' 
+                });
+
+                const status = {
+                    action: 'toggle',
+                    response: response,
+                    timestamp: new Date().toISOString()
+                };
+
+                resultDiv.textContent = 'Extension Toggled:\n' + JSON.stringify(status, null, 2);
+                resultDiv.className = 'test-result success';
+
+                // Wait a moment then check state
+                setTimeout(checkExtensionState, 1000);
+
+            } catch (error) {
+                resultDiv.textContent = `Error toggling extension: ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Test force quiz when enabled
+        async function testForceQuiz() {
+            const resultDiv = document.getElementById('force-quiz-result');
+            try {
+                resultDiv.textContent = 'Testing force quiz (extension should be enabled)...\n';
+
+                if (typeof chrome === 'undefined' || !chrome.runtime) {
+                    throw new Error('Chrome extension API not available');
+                }
+
+                const response = await chrome.runtime.sendMessage({ 
+                    action: 'forceQuiz' 
+                });
+
+                const status = {
+                    action: 'forceQuiz',
+                    response: response,
+                    timestamp: new Date().toISOString()
+                };
+
+                resultDiv.textContent = 'Force Quiz Test:\n' + JSON.stringify(status, null, 2);
+                resultDiv.className = response.success ? 'test-result success' : 'test-result error';
+
+            } catch (error) {
+                resultDiv.textContent = `Error testing force quiz: ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Test force quiz when disabled
+        async function testForceQuizDisabled() {
+            const resultDiv = document.getElementById('force-quiz-result');
+            try {
+                resultDiv.textContent = 'Testing force quiz (extension should be disabled)...\n';
+
+                // First disable the extension
+                await chrome.runtime.sendMessage({ 
+                    action: 'toggleExtension', 
+                    enabled: false 
+                });
+
+                // Wait a moment for the state to update
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Now try to force quiz
+                const response = await chrome.runtime.sendMessage({ 
+                    action: 'forceQuiz' 
+                });
+
+                const status = {
+                    action: 'forceQuizDisabled',
+                    response: response,
+                    expectedBehavior: 'Should fail or be blocked',
+                    timestamp: new Date().toISOString()
+                };
+
+                resultDiv.textContent = 'Force Quiz (Disabled) Test:\n' + JSON.stringify(status, null, 2);
+                
+                // This should fail when extension is disabled
+                if (!response.success) {
+                    resultDiv.className = 'test-result success';
+                    resultDiv.textContent += '\n✅ PASS: Force quiz correctly blocked when extension is disabled';
+                } else {
+                    resultDiv.className = 'test-result error';
+                    resultDiv.textContent += '\n❌ FAIL: Force quiz should be blocked when extension is disabled';
+                }
+
+            } catch (error) {
+                resultDiv.textContent = `Error testing force quiz (disabled): ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Update status indicator
+        function updateStatusIndicator(isEnabled) {
+            const statusElement = document.getElementById('extension-status');
+            const indicator = statusElement.querySelector('.status-indicator');
+            const text = statusElement.querySelector('span:last-child');
+
+            if (isEnabled) {
+                indicator.className = 'status-indicator status-active';
+                text.textContent = 'Extension Status: Active';
+            } else {
+                indicator.className = 'status-indicator status-inactive';
+                text.textContent = 'Extension Status: Inactive';
+            }
+        }
+
+        // Refresh status
+        async function refreshStatus() {
+            const resultDiv = document.getElementById('status-result');
+            try {
+                resultDiv.textContent = 'Refreshing extension status...\n';
+
+                if (typeof chrome === 'undefined' || !chrome.runtime) {
+                    throw new Error('Chrome extension API not available');
+                }
+
+                // Test background script
+                const bgResponse = await chrome.runtime.sendMessage({ action: 'testBackground' });
+                
+                // Test content script
+                const contentResponse = await chrome.runtime.sendMessage({ action: 'testContent' });
+
+                const status = {
+                    backgroundScript: bgResponse,
+                    contentScript: contentResponse,
+                    timestamp: new Date().toISOString()
+                };
+
+                resultDiv.textContent = 'Extension Status:\n' + JSON.stringify(status, null, 2);
+                resultDiv.className = 'test-result success';
+
+            } catch (error) {
+                resultDiv.textContent = `Error refreshing status: ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Run full integration test
+        async function runIntegrationTest() {
+            const resultDiv = document.getElementById('integration-result');
+            try {
+                resultDiv.textContent = 'Running full integration test...\n';
+
+                const results = {
+                    steps: [],
+                    timestamp: new Date().toISOString()
+                };
+
+                // Step 1: Check initial state
+                results.steps.push('Step 1: Check initial extension state');
+                await checkExtensionState();
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                // Step 2: Disable extension
+                results.steps.push('Step 2: Disable extension');
+                await disableExtension();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Step 3: Try force quiz (should fail)
+                results.steps.push('Step 3: Try force quiz while disabled');
+                await testForceQuizDisabled();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Step 4: Re-enable extension
+                results.steps.push('Step 4: Re-enable extension');
+                await enableExtension();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Step 5: Try force quiz (should work)
+                results.steps.push('Step 5: Try force quiz while enabled');
+                await testForceQuiz();
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                results.steps.push('Integration test completed');
+
+                resultDiv.textContent = 'Integration Test Results:\n' + JSON.stringify(results, null, 2);
+                resultDiv.className = 'test-result success';
+
+            } catch (error) {
+                resultDiv.textContent = `Integration test failed: ${error.message}`;
+                resultDiv.className = 'test-result error';
+            }
+        }
+
+        // Auto-check extension state on page load
+        window.addEventListener('load', () => {
+            console.log('🎓 Extension Toggle Test Page Loaded');
+            setTimeout(checkExtensionState, 1000);
+        });
+    </script>
+</body>
+</html> 

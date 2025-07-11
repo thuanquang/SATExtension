@@ -88,6 +88,26 @@ async function initializeExtension() {
           return true;
         }
         
+        // Handle extension state changes
+        if (request.action === 'extensionStateChanged') {
+          console.log('🎓 Extension state changed:', request.enabled);
+          if (request.enabled) {
+            console.log('🎓 Extension enabled - reinitializing if needed');
+            // Reinitialize if extension was disabled and is now enabled
+            if (controller && !controller.isActive) {
+              controller.init();
+            }
+          } else {
+            console.log('🎓 Extension disabled - stopping active quizzes');
+            // Stop any active quizzes when extension is disabled
+            if (controller) {
+              controller.endQuiz();
+            }
+          }
+          sendResponse({ success: true });
+          return true;
+        }
+        
         // Forward other messages to the controller if available
         if (controller) {
           if (request.action === 'forceQuiz') {

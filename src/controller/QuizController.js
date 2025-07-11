@@ -6,39 +6,46 @@
 
 class QuizController {
   constructor() {
+    console.log('🎓 Creating enhanced quiz controller...');
     
-    // Initialize core components
+    // Initialize components
     this.state = new QuizState();
     this.modal = new QuizModal();
     this.feedback = new FeedbackManager();
     this.blockManager = new BlockManager();
     
-    // Initialize gamification systems - simplified for content script
+    // Initialize gamification systems
     this.xpManager = null;
     this.badgeManager = null;
     this.streakManager = null;
     this.challengeEngine = null;
     this.progressDashboard = null;
+    this.customizationManager = null;
     
-    // User identification for gamification
-    this.userId = null; // Will be set after auth
-    
-    // Timer management
-    this.countdownTimer = null;
-    
-    // Session start time for timing
+    // Session tracking
     this.sessionStartTime = null;
+    this.countdownTimer = null;
+    this.userId = null;
+    
+    // State tracking
+    this.isActive = false;
     
     // Setup callbacks
     this._setupCallbacks();
-    
-    console.log('🎓 Enhanced Quiz Controller initialized');
   }
 
   async init() {
     console.log('🎓 Starting enhanced quiz controller initialization...');
     
     try {
+      // Check if extension is enabled first
+      const isExtensionEnabled = await this._checkExtensionEnabled();
+      if (!isExtensionEnabled) {
+        console.log('🎓 Extension is disabled - skipping quiz initialization');
+        this.isActive = false;
+        return;
+      }
+      
       // Ensure user is authenticated and get UUID
       await window.ensureAuth();
       this.userId = await window.getCurrentUserId();
@@ -54,8 +61,39 @@ class QuizController {
       } else {
         console.log('🎓 No quiz needed at this time');
       }
+      
+      // Mark as active if initialization completed successfully
+      this.isActive = true;
+      
     } catch (error) {
       console.error('🎓 Error during initialization:', error);
+      this.isActive = false;
+    }
+  }
+
+  /**
+   * Check if the extension is enabled
+   */
+  async _checkExtensionEnabled() {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        const result = await new Promise((resolve) => {
+          chrome.storage.local.get(['extensionEnabled'], (result) => {
+            resolve(result);
+          });
+        });
+        
+        const isEnabled = result.extensionEnabled !== false; // Default to true if not set
+        console.log('🎓 Extension enabled status:', isEnabled);
+        return isEnabled;
+      } else {
+        // Fallback for testing environment
+        console.log('🎓 Chrome storage not available - assuming extension is enabled for testing');
+        return true;
+      }
+    } catch (error) {
+      console.error('🎓 Error checking extension enabled status:', error);
+      return true; // Default to enabled on error
     }
   }
 
@@ -162,6 +200,13 @@ class QuizController {
   async forceQuiz() {
     console.log('🎓 Force quiz requested');
     
+    // Check if extension is enabled before allowing force quiz
+    const isExtensionEnabled = await this._checkExtensionEnabled();
+    if (!isExtensionEnabled) {
+      console.log('🎓 Extension is disabled - cannot force quiz');
+      throw new Error('Extension is disabled. Please enable it in the popup to use this feature.');
+    }
+    
     if (!this.blockManager.isWebsiteBlocked()) {
       this.blockManager.block();
       await new Promise(resolve => setTimeout(resolve, 100)); // Allow overlay to be created
@@ -183,6 +228,8 @@ class QuizController {
     this.state.reset();
     // Clear feedback
     this.feedback.clear();
+    // Mark as inactive
+    this.isActive = false;
   }
 
   async _createAndShowModal(question) {
@@ -628,7 +675,8 @@ class QuizController {
       maxAttempts: this.state.getMaxAttempts(),
       isReviewing: this.state.isInReviewMode(),
       isBlocked: this.blockManager.isWebsiteBlocked(),
-      userId: this.userId
+      userId: this.userId,
+      isActive: this.isActive
     };
   }
 
@@ -736,4 +784,4 @@ class QuizController {
 }
 
 // Make QuizController globally accessible
-window.QuizController = QuizController; 
+window.QuizController = QuizController;

@@ -57,6 +57,13 @@ class QuizState {
 
   async shouldShowQuiz() {
     try {
+      // First check if extension is enabled
+      const isExtensionEnabled = await this._checkExtensionEnabled();
+      if (!isExtensionEnabled) {
+        console.log('🎓 Extension is disabled - not showing quiz');
+        return false;
+      }
+      
       const lastQuizTime = await this.getStorageData('lastQuizTime');
       const currentTime = Date.now();
       
@@ -82,6 +89,32 @@ class QuizState {
       console.error('🎓 Error checking quiz status:', error);
       // Show quiz on error to ensure extension works
       return true;
+    }
+  }
+
+  /**
+   * Check if the extension is enabled
+   */
+  async _checkExtensionEnabled() {
+    try {
+      if (typeof chrome !== 'undefined' && chrome.storage) {
+        const result = await new Promise((resolve) => {
+          chrome.storage.local.get(['extensionEnabled'], (result) => {
+            resolve(result);
+          });
+        });
+        
+        const isEnabled = result.extensionEnabled !== false; // Default to true if not set
+        console.log('🎓 Extension enabled status:', isEnabled);
+        return isEnabled;
+      } else {
+        // Fallback for testing environment
+        console.log('🎓 Chrome storage not available - assuming extension is enabled for testing');
+        return true;
+      }
+    } catch (error) {
+      console.error('🎓 Error checking extension enabled status:', error);
+      return true; // Default to enabled on error
     }
   }
 

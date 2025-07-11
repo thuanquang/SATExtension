@@ -64,6 +64,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       const newState = !(result.extensionEnabled !== false);
       chrome.storage.local.set({ extensionEnabled: newState }, () => {
         sendResponse({ enabled: newState });
+        
+        // Notify all content scripts of the state change
+        chrome.tabs.query({}, (tabs) => {
+          tabs.forEach((tab) => {
+            try {
+              chrome.tabs.sendMessage(tab.id, { 
+                action: 'extensionStateChanged', 
+                enabled: newState 
+              }).catch(() => {
+                // Ignore errors for tabs where content script isn't loaded
+              });
+            } catch (error) {
+              // Ignore errors for tabs where content script isn't loaded
+            }
+          });
+        });
+        
         // Reload active tabs to apply/remove content script
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
           if (tabs[0]) {

@@ -390,6 +390,7 @@ The SAT Quiz Blocker is a browser extension that blocks websites until users ans
 ✅ **User Progress Tracking**: Complete data persistence and retrieval
 ✅ **Global Progress Fix**: User progress now consistent across all websites (fixed Chrome storage usage)
 ✅ **XP Bar Proportional Filling**: Progress bar now fills accurately based on mathematical calculation
+✅ **Extension Toggle Fix**: Extension now properly stops when disabled and resumes when enabled
 
 🔧 **Latest Fixes Completed**:
 **1. Global Progress Tracking Fix:**
@@ -404,10 +405,18 @@ The SAT Quiz Blocker is a browser extension that blocks websites until users ans
 - Implemented proper error handling and fallback displays
 - Added detailed logging for debugging progress calculations
 
-**3. Enhanced Error Handling:**
+**3. Extension Toggle Fix:**
+- Added extension enabled state checks in QuizController and QuizState
+- Implemented proper state management with isActive tracking
+- Added content script listeners for extension state changes
+- Enhanced background script to notify all tabs of state changes
+- Force quiz now properly blocked when extension is disabled
+- Active quizzes automatically stopped when extension is disabled
+
+**4. Enhanced Error Handling:**
 - Improved background script message forwarding
 - Added fallback gamification stats when content script unavailable
 - Enhanced reset functionality to include gamification data
 - Better Chrome storage error handling with localStorage fallback
 
-**🚀 Result**: The SAT Quiz Extension now provides a truly unified experience across all websites with accurate progress tracking and visual feedback. All gamification features work consistently regardless of which website the user is browsing. 
+**🚀 Result**: The SAT Quiz Extension now provides a truly unified experience across all websites with accurate progress tracking, visual feedback, and proper enable/disable functionality. All gamification features work consistently regardless of which website the user is browsing, and the extension properly responds to user toggle controls. 
